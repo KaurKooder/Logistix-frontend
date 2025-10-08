@@ -1,12 +1,21 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+import AboutView from "@/views/AboutView.vue";
 </script>
 
 <template>
-  <div>
-    <router-view />
-  </div>
+  <header>
+    <div class="wrapper">
+      <nav>
+        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/about">About</RouterLink>
+        <RouterLink to="/users">Users</RouterLink>
+        <RouterLink to="/posts">Posts</RouterLink>
+      </nav>
+    </div>
+  </header>
+  <RouterView />
 </template>
 
 
