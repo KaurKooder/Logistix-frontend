@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue';
+import apiClient from '@/services/api'
 
 // State
 const posts = ref([]);
@@ -8,73 +9,40 @@ const selectedPost = ref(null);
 const newPostTitle = ref('');
 const newPostContent = ref('');
 
-// Fetch all posts
 const fetchPosts = async () => {
-  try {
-    const response = await fetch('http://localhost:8080/posts');
-    posts.value = await response.json();
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-  }
-};
+  const response = await apiClient.get("/posts")
+  posts.value = response.data
+}
 
-// Fetch single post by ID
 const fetchPostById = async () => {
-  if (!postIdToFetch.value) return;
-
   try {
-    const response = await fetch(`http://localhost:8080/posts/${postIdToFetch.value}`);
-    if (response.ok) {
-      selectedPost.value = await response.json();
-    } else {
-      selectedPost.value = null;
-      console.warn('Post not found');
-    }
+    const response = await apiClient.get(`/posts/${postIdToFetch.value}`)
+    selectedPost.value = response.data;
   } catch (error) {
-    console.error('Error fetching post:', error);
+    selectedPost.value = null;
+    console.error('Post not found:', error);
   }
-};
+}
 
-// Add a new post
 const addPost = async () => {
-  if (!newPostTitle.value || !newPostContent.value) return;
+  const response = await apiClient.post('/posts', {
+    title: newPostTitle.value,
+    content: newPostContent.value
+  })
+  posts.value.push(response.data)
+  newPostTitle.value = ''
+  newPostContent.value = ''
+}
 
-  try {
-    const response = await fetch('http://localhost:8080/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: newPostTitle.value,
-        content: newPostContent.value
-      })
-    });
-
-    if (response.ok) {
-      const createdPost = await response.json();
-      posts.value.push(createdPost);
-      newPostTitle.value = '';
-      newPostContent.value = '';
-    }
-  } catch (error) {
-    console.error('Error adding post:', error);
-  }
-};
-
-// Delete a post
 const deletePost = async (id) => {
   try {
-    const response = await fetch(`http://localhost:8080/posts/${id}`, {
-      method: 'DELETE'
-    });
-
-    if (response.status === 204) {
-      posts.value = posts.value.filter(p => p.id !== id);
-      if (selectedPost.value?.id === id) selectedPost.value = null;
-    }
+    await apiClient.delete(`/posts/${id}`)
+    posts.value = posts.value.filter(p => p.id !== id)
+    if (selectedPost.value?.id === id) selectedPost.value = null
   } catch (error) {
-    console.error('Error deleting post:', error);
+    console.error('Error deleting post:', error)
   }
-};
+}
 
 // Load posts initially
 onMounted(fetchPosts);
@@ -89,6 +57,13 @@ onMounted(fetchPosts);
     <textarea v-model="newPostContent" placeholder="New post content"></textarea>
     <button @click="addPost">Add Post</button>
   </div>
+
+  <h2>All posts</h2>
+  <ul>
+    <li v-for="post in posts" :key="post.id">
+      <b>{{ post.title }}</b> - {{ post.content }}
+    </li>
+  </ul>
 
   <!-- Fetch single post -->
   <div>
