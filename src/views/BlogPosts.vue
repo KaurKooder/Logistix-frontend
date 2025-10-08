@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import apiClient from '@/services/api'
+import "@/assets/css/blogposts.css";
 
 // State
 const posts = ref([]);
@@ -49,35 +50,44 @@ onMounted(fetchPosts);
 </script>
 
 <template>
-  <h1>Blog Posts</h1>
+  <div class="blog-page">
+    <div class="blog-header">
+      <h1>Blogi ja artiklid</h1>
 
-  <!-- Add post -->
-  <div>
-    <input v-model="newPostTitle" placeholder="New post title" />
-    <textarea v-model="newPostContent" placeholder="New post content"></textarea>
-    <button @click="addPost">Add Post</button>
-  </div>
+      <!-- Uue postituse loomine -->
+      <div class="new-post">
+        <input v-model="newPostTitle" placeholder="Uue postituse pealkiri" />
+        <textarea v-model="newPostContent" placeholder="Sisesta postituse sisu..."></textarea>
+        <button @click="addPost">Lisa postitus</button>
+      </div>
 
-  <h2>All posts</h2>
-  <ul>
-    <li v-for="post in posts" :key="post.id">
-      <b>{{ post.title }}</b> - {{ post.content }}
-    </li>
-  </ul>
+      <!-- Ühe postituse otsimine ID järgi -->
+      <div class="fetch-post">
+        <input
+          type="number"
+          v-model.number="postIdToFetch"
+          placeholder="Sisesta postituse ID"
+        />
+        <button @click="fetchPostById">Kuva postitus ID järgi</button>
 
-  <!-- Fetch single post -->
-  <div>
-    <input type="number" v-model.number="postIdToFetch" placeholder="Post ID" />
-    <button @click="fetchPostById">Get Post by ID</button>
-
-    <div v-if="selectedPost">
-      <p><b>Selected Post:</b></p>
-      <p>ID: {{ selectedPost.id }}</p>
-      <p>Title: {{ selectedPost.title }}</p>
-      <p>Content: {{ selectedPost.content }}</p>
+        <div v-if="selectedPost" class="single-post">
+          <h3>{{ selectedPost.title }}</h3>
+          <p>{{ selectedPost.content }}</p>
+        </div>
+        <div v-else-if="postIdToFetch">
+          <p>Postitust ei leitud.</p>
+        </div>
+      </div>
     </div>
-    <div v-else-if="postIdToFetch">
-      <p>Post not found.</p>
+
+    <!-- Kõik postitused -->
+    <div class="blog-grid">
+      <div v-for="post in posts" :key="post.id" class="blog-card">
+        <div class="post-content">
+          <h3 class="post-title">{{ post.title }}</h3>
+          <p class="post-content-text">{{ post.content }}</p>
+        </div>
+      </div>
     </div>
   </div>
 
