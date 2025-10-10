@@ -12,6 +12,7 @@ import AboutView from "@/views/AboutView.vue";
         <RouterLink to="/about">About</RouterLink>
         <RouterLink to="/users">Users</RouterLink>
         <RouterLink to="/posts">Posts</RouterLink>
+        <RouterLink to="/products">Products</RouterLink>
       </nav>
     </div>
   </header>
