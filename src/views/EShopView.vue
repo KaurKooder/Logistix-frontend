@@ -59,20 +59,24 @@ onMounted(fetchProducts);
 
 <template>
   <div class="container">
-    <h1>E-pood</h1>
+    <div class="title">
+      <b>E-pood</b>
+    </div>
 
     <div class="form">
       <h3>Lisa uus toode</h3>
-      <input v-model="newProductName" placeholder="Nimi" />
-      <input v-model="newProductDescription" placeholder="Kirjeldus" />
-      <input v-model="newProductCategory" placeholder="Kategooria" />
-      <input v-model="newProductPrice" type="number" placeholder="Hind (€)" />
-      <button @click="addProduct">Lisa toode</button>
+      <input v-model="newProductName" placeholder="Nimi" class="form-input" />
+      <input v-model="newProductDescription" placeholder="Kirjeldus" class="form-input" />
+      <input v-model="newProductCategory" placeholder="Kategooria" class="form-input" />
+      <input v-model="newProductPrice" type="number" placeholder="Hind (€)" class="form-input" />
+      <div>
+        <button @click="addProduct" class="form-button">Lisa toode</button>
+      </div>
     </div>
 
     <div class="list">
       <h3>Olemasolevad tooted</h3>
-      <ul>
+      <ul class="list-items">
         <li v-for="product in products" :key="product.id" class="product-item">
           <div class="product-header">
             <b>{{ product.name }}</b>
@@ -87,8 +91,10 @@ onMounted(fetchProducts);
 
     <div class="find">
       <h3>Otsi toode ID järgi</h3>
-      <input v-model.number="productIdToFetch" type="number" placeholder="Toote ID" />
-      <button @click="fetchProductById">Otsi</button>
+      <input v-model.number="productIdToFetch" type="number" placeholder="Toote ID" class="form-input" />
+      <div>
+        <button @click="fetchProductById" class="find-button">Otsi</button>
+      </div>
 
       <div v-if="selectedProduct" class="result">
         <p><b>{{ selectedProduct.name }}</b></p>
