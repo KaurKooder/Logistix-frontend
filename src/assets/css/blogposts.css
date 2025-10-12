@@ -2,7 +2,6 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 60px 20px;
-  background-color: var(--color-background, #f8f6f2);
   color: var(--color-text, #222);
 }
 
