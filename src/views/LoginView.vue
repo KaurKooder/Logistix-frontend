@@ -26,8 +26,15 @@ const submit = async () => {
         name: name.value,
         password: password.value
       })
-      message.value = 'Login successful'
-      console.log('Login response:', response.data)
+
+      const token = response.data.token // JWT token backendist
+      if (token) {
+        localStorage.setItem('jwt', token) // salvestame tokeni
+        message.value = 'Login successful'
+        console.log('JWT token:', token)
+      } else {
+        message.value = 'Invalid name or password'
+      }
 
     } else {
       // Register
@@ -50,6 +57,7 @@ const submit = async () => {
     }
   }
 }
+
 </script>
 
 <template>
