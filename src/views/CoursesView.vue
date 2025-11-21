@@ -1,10 +1,7 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import apiClient from '@/services/api';
 import "@/assets/css/courses.css";
-
-const isAdmin = ref(true); // default role
-const userId = ref(1);     // admin=1, user=2
 
 const courses = ref([]);
 const newCourse = ref({
@@ -15,9 +12,55 @@ const newCourse = ref({
   date: "",
 });
 
+// Decode JWT token to get user role
+function getUserFromToken() {
+  const token = localStorage.getItem('jwt'); // Changed to 'jwt'
+
+  console.log("Token from storage:", token); // DEBUG
+
+  if (!token) return null;
+
+  try {
+    // JWT tokens have 3 parts separated by dots: header.payload.signature
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+
+    console.log("Decoded token:", decoded); // DEBUG
+
+    // Your JWT structure has: subject (username), roles (array), userId
+    return {
+      name: decoded.sub,
+      userId: decoded.userId,
+      role: decoded.roles?.[0], // roles is an array like ["ROLE_ADMIN"] or ["ROLE_USER"]
+      ...decoded
+    };
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    return null;
+  }
+}
+
+// Get user info from token
+const user = computed(() => getUserFromToken());
+const isLoggedIn = computed(() => {
+  const loggedIn = user.value !== null;
+  console.log("Is logged in:", loggedIn, "User:", user.value); // DEBUG
+  return loggedIn;
+});
+const isAdmin = computed(() => {
+  const admin = user.value?.role === 'ROLE_ADMIN';
+  console.log("Is admin:", admin, "Role:", user.value?.role); // DEBUG
+  return admin;
+});
+const userId = computed(() => user.value?.userId);
+
 async function loadCourses() {
   try {
-    const res = await apiClient.get(`/courses?userId=${userId.value}`);
+    const url = isLoggedIn.value
+      ? `/courses?userId=${userId.value}`
+      : '/courses';
+    console.log("Loading courses from:", url); // DEBUG
+    const res = await apiClient.get(url);
     courses.value = res.data;
   } catch (error) {
     console.error("Error loading courses:", error);
@@ -35,6 +78,18 @@ async function createCourse() {
   }
 }
 
+async function deleteCourse(courseId) {
+  if (!confirm("Kas oled kindel, et soovid selle kursuse kustutada?")) return;
+
+  try {
+    await apiClient.delete(`/courses/${courseId}`);
+    await loadCourses();
+  } catch (error) {
+    console.error("Error deleting course:", error);
+    alert("Viga kursuse kustutamisel!");
+  }
+}
+
 async function register(courseId) {
   try {
     await apiClient.post(`/courses/${courseId}/register?userId=${userId.value}`);
@@ -46,38 +101,34 @@ async function register(courseId) {
 
 async function unregister(courseId) {
   try {
-    await apiClient.delete(`/courses/${courseId}/register?userId=${userId.value}`);
+    await apiClient.post(`/courses/${courseId}/unregister`);
     await loadCourses();
   } catch (error) {
     console.error("Error unregistering:", error);
   }
 }
 
-function toggleRole() {
-  isAdmin.value = !isAdmin.value;
-  userId.value = isAdmin.value ? 1 : 2;
-  loadCourses();
-}
-
 onMounted(loadCourses);
 </script>
-
 
 <template>
   <div class="courses">
     <div class="header">
       <h1>Koolitused</h1>
-      <button @click="toggleRole" class="role-btn">
-        {{ isAdmin ? "Lülitu kasutajaks" : "Lülitu adminiks" }}
-      </button>
     </div>
 
-    <p class="role-info">
+    <!-- Show role info only if logged in -->
+    <p v-if="isLoggedIn" class="role-info">
       Praegu sisse logitud kui:
       <strong>{{ isAdmin ? "Administraator" : "Tavaline kasutaja" }}</strong>
+      ({{ user.name }})
     </p>
 
-    <!-- ADMINI OSA -->
+    <p v-else class="role-info">
+      <strong>Külalisvaade</strong> - Logi sisse, et registreeruda koolitustele
+    </p>
+
+    <!-- ADMINI OSA - only for admins -->
     <div v-if="isAdmin" class="admin-section">
       <h2>Lisa uus koolitus</h2>
       <div class="form">
@@ -99,12 +150,23 @@ onMounted(loadCourses);
         <p><strong>Hind:</strong> {{ c.price }} €</p>
         <p>{{ c.description }}</p>
 
-        <div v-if="!isAdmin">
+        <!-- Register/Unregister buttons - only for logged-in users (not admins) -->
+        <template v-if="isLoggedIn && !isAdmin">
           <button v-if="!c.registered" @click="register(c.id)">Registreeru</button>
           <button v-else @click="unregister(c.id)" class="cancel-btn">
             Tühista registreerimine
           </button>
-        </div>
+        </template>
+
+        <!-- Delete button - only for admins -->
+        <button v-if="isAdmin" @click="deleteCourse(c.id)" class="delete-btn">
+          Kustuta
+        </button>
+
+        <!-- Message for guests -->
+        <p v-if="!isLoggedIn" class="guest-message">
+          <em>Logi sisse, et registreeruda</em>
+        </p>
       </div>
     </div>
   </div>
