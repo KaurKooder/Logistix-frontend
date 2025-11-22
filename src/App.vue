@@ -5,82 +5,52 @@ import AboutView from "@/views/AboutView.vue";
 </script>
 
 <template>
-  <header>
-    <div class="wrapper">
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-        <RouterLink to="/users">Users</RouterLink>
-        <RouterLink to="/posts">Posts</RouterLink>
-        <RouterLink to="/products">Products</RouterLink>
-        <RouterLink to="/courses">Courses</RouterLink>
-      </nav>
+  <header class="navbar">
+    <div class="nav-left">
+      <img src="@/assets/logo/vkkeskuslogo.png" alt="Logo" class="logo" />
     </div>
+
+      <nav class="nav-menu">
+        <RouterLink to="/">Avaleht</RouterLink>
+        <RouterLink to="/about">Meist</RouterLink>
+        <RouterLink to="/users">Konto</RouterLink>
+        <RouterLink to="/posts">Blogi ja artiklid</RouterLink>
+        <RouterLink to="/products">E-pood</RouterLink>
+        <RouterLink to="/courses">Koolitused</RouterLink>
+      </nav>
   </header>
   <RouterView />
 </template>
 
 
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 40px;
+  padding: 20px 40px;
+  background: #faf8f4;
+  border-bottom: 1px solid #eee;
 }
 
 .logo {
-  display: block;
-  margin: 0 auto 2rem;
+  height: 60px;
 }
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
+.nav-menu {
+  display: flex;
+  gap: 28px;
+  font-size: 20px;
 }
 
-nav a.router-link-exact-active {
-  color: var(--color-text);
+.nav-menu a {
+  text-decoration: none;
+  color: #c69a4b; /* kuldne toon */
+  font-weight: 500;
 }
 
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+.nav-menu a:hover {
+  color: #222222;
 }
 </style>
