@@ -3,76 +3,82 @@ import { ref, onMounted, computed } from 'vue';
 import apiClient from '@/services/api';
 import "@/assets/css/courses.css";
 
+// Courses list
 const courses = ref([]);
+const totalPages = ref(1);
+
+// Admin create course
 const newCourse = ref({
   name: "",
   category: "",
   description: "",
   price: "",
-  date: "",
+  date: "",  // ✅ Single date for the course
 });
 
-// Decode JWT token to get user role
+// Filter + pagination state
+const filter = ref({
+  name: "",
+  category: "",
+  startDate: "",  // ✅ Search FROM this date
+  endDate: "",    // ✅ Search TO this date
+  page: 0,
+  size: 5,
+  sortBy: "name",
+  sortDir: "asc",
+});
+
+// Decode JWT token to get user info
 function getUserFromToken() {
-  const token = localStorage.getItem('jwt'); // Changed to 'jwt'
-
-  console.log("Token from storage:", token); // DEBUG
-
+  const token = localStorage.getItem('jwt');
   if (!token) return null;
-
   try {
-    // JWT tokens have 3 parts separated by dots: header.payload.signature
     const payload = token.split('.')[1];
     const decoded = JSON.parse(atob(payload));
-
-    console.log("Decoded token:", decoded); // DEBUG
-
-    // Your JWT structure has: subject (username), roles (array), userId
     return {
       name: decoded.sub,
       userId: decoded.userId,
-      role: decoded.roles?.[0], // roles is an array like ["ROLE_ADMIN"] or ["ROLE_USER"]
+      role: decoded.roles?.[0],
       ...decoded
     };
-  } catch (error) {
-    console.error("Error decoding token:", error);
-    return null;
-  }
+  } catch (e) { return null; }
 }
 
-// Get user info from token
 const user = computed(() => getUserFromToken());
-const isLoggedIn = computed(() => {
-  const loggedIn = user.value !== null;
-  console.log("Is logged in:", loggedIn, "User:", user.value); // DEBUG
-  return loggedIn;
-});
-const isAdmin = computed(() => {
-  const admin = user.value?.role === 'ROLE_ADMIN';
-  console.log("Is admin:", admin, "Role:", user.value?.role); // DEBUG
-  return admin;
-});
+const isLoggedIn = computed(() => user.value !== null);
+const isAdmin = computed(() => user.value?.role === 'ROLE_ADMIN');
 const userId = computed(() => user.value?.userId);
 
-async function loadCourses() {
+// Load courses with filter + pagination
+async function loadCoursesFiltered() {
   try {
-    const url = isLoggedIn.value
-      ? `/courses?userId=${userId.value}`
-      : '/courses';
-    console.log("Loading courses from:", url); // DEBUG
-    const res = await apiClient.get(url);
-    courses.value = res.data;
+    const params = { ...filter.value };
+    if (isLoggedIn.value) params.userId = userId.value;
+    const res = await apiClient.get('/courses/search', { params });
+    courses.value = res.data.content;
+    totalPages.value = res.data.totalPages;
   } catch (error) {
     console.error("Error loading courses:", error);
   }
 }
 
+// Admin functions
 async function createCourse() {
   if (!newCourse.value.name) return alert("Lisa vähemalt nimi!");
   try {
-    await apiClient.post('/courses', newCourse.value);
+    // ✅ Map single date to both startDate and endDate for backend
+    const courseData = {
+      name: newCourse.value.name,
+      category: newCourse.value.category,
+      description: newCourse.value.description,
+      price: newCourse.value.price,
+      startDate: newCourse.value.date,  // Same date for both
+      endDate: newCourse.value.date,    // Same date for both
+    };
+
+    await apiClient.post('/courses', courseData);
     newCourse.value = { name: "", category: "", description: "", price: "", date: "" };
-    await loadCourses();
+    loadCoursesFiltered();
   } catch (error) {
     console.error("Error creating course:", error);
   }
@@ -80,36 +86,48 @@ async function createCourse() {
 
 async function deleteCourse(courseId) {
   if (!confirm("Kas oled kindel, et soovid selle kursuse kustutada?")) return;
-
   try {
     await apiClient.delete(`/courses/${courseId}`);
-    await loadCourses();
+    loadCoursesFiltered();
   } catch (error) {
     console.error("Error deleting course:", error);
     alert("Viga kursuse kustutamisel!");
   }
 }
 
+// Register / unregister
 async function register(courseId) {
   try {
     await apiClient.post(`/courses/${courseId}/register?userId=${userId.value}`);
-    await loadCourses();
-  } catch (error) {
-    console.error("Error registering:", error);
-  }
+    loadCoursesFiltered();
+  } catch (error) { console.error(error); }
 }
 
 async function unregister(courseId) {
   try {
     await apiClient.post(`/courses/${courseId}/unregister`);
-    await loadCourses();
-  } catch (error) {
-    console.error("Error unregistering:", error);
+    loadCoursesFiltered();
+  } catch (error) { console.error(error); }
+}
+
+// Pagination
+function nextPage() {
+  if (filter.value.page < totalPages.value - 1) {
+    filter.value.page++;
+    loadCoursesFiltered();
+  }
+}
+function prevPage() {
+  if (filter.value.page > 0) {
+    filter.value.page--;
+    loadCoursesFiltered();
   }
 }
 
-onMounted(loadCourses);
+// Initial load
+onMounted(loadCoursesFiltered);
 </script>
+
 
 <template>
   <div class="courses">
@@ -136,17 +154,42 @@ onMounted(loadCourses);
         <input v-model="newCourse.category" placeholder="Kategooria" />
         <input v-model="newCourse.description" placeholder="Kirjeldus" />
         <input v-model.number="newCourse.price" placeholder="Hind (€)" />
-        <input v-model="newCourse.date" type="date" />
+        <input v-model="newCourse.date" type="date" placeholder="Kuupäev" />
         <button @click="createCourse">Lisa</button>
       </div>
     </div>
+
+    <div class="filter-section">
+      <h3>Otsi koolitusi</h3>
+      <input v-model="filter.name" placeholder="Nimi" />
+      <input v-model="filter.category" placeholder="Kategooria" />
+      <input v-model="filter.startDate" type="date" placeholder="Alguskuupäev (alates)" />
+      <input v-model="filter.endDate" type="date" placeholder="Lõppkuupäev (kuni)" />
+      <select v-model="filter.sortBy">
+        <option value="name">Nimi</option>
+        <option value="startDate">Kuupäev</option>
+      </select>
+      <select v-model="filter.sortDir">
+        <option value="asc">Kasvavalt</option>
+        <option value="desc">Kahanevalt</option>
+      </select>
+      <button @click="loadCoursesFiltered">Otsi</button>
+    </div>
+
+
+    <div class="pagination">
+      <button @click="prevPage" :disabled="filter.page === 0">Eelmine</button>
+      <span>Leht {{ filter.page + 1 }} / {{ totalPages }}</span>
+      <button @click="nextPage" :disabled="filter.page >= totalPages - 1">Järgmine</button>
+    </div>
+
 
     <!-- KOOLITUSTE NIMEKIRI -->
     <div class="course-list">
       <div v-for="c in courses" :key="c.id" class="course-card">
         <h3>{{ c.name }}</h3>
         <p><strong>Kategooria:</strong> {{ c.category }}</p>
-        <p><strong>Kuupäev:</strong> {{ c.date }}</p>
+        <p><strong>Kuupäev:</strong> {{ c.startDate || 'Määramata' }}</p>
         <p><strong>Hind:</strong> {{ c.price }} €</p>
         <p>{{ c.description }}</p>
 
