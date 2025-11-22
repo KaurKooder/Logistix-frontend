@@ -4,6 +4,8 @@ import BlogPosts from "@/views/BlogPosts.vue";
 import LoginView from "@/views/LoginView.vue";
 import EShopView from "@/views/EShopView.vue";
 import CoursesView from "@/views/CoursesView.vue";
+import SingleBlogPostView from "@/views/SingleBlogPostView.vue";
+import CreatePost from "@/views/CreatePost.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,6 +32,17 @@ const router = createRouter({
       path: '/posts',
       name: 'Posts',
       component: BlogPosts
+    },
+    {
+      path: '/posts/create',
+      name: 'CreatePost',
+      component: CreatePost
+    },
+    {
+      path: '/posts/:id',
+      name: 'PostDetail',
+      component: SingleBlogPostView,
+      props: true
     },
     {
       path: '/products',
