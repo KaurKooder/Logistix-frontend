@@ -1,0 +1,53 @@
+.create-post-page {
+  max-width: 600px;
+  margin: 2rem auto;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+}
+
+.create-post-page h1 {
+  color: #c5973c;
+}
+.create-post-page input,
+.create-post-page textarea {
+  margin-bottom: 1rem;
+  padding: 12px 15px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+  resize: none;
+  width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #fff;
+}
+
+.create-post-page input:focus,
+.create-post-page textarea:focus {
+  border-color: #a17b28;
+  box-shadow: 0 0 0 3px rgba(161,123,40,0.2);
+}
+
+.create-post-page textarea {
+  min-height: 150px;
+}
+.create-post-page button {
+  background-color: #c5973c;
+  color: white;
+  padding: 0.6rem 1.5rem;
+  width: 200px;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  align-self: center;
+  margin-top: 1rem;
+}
+
+.create-post-page button:hover {
+  background-color: #8f6b20;
+}

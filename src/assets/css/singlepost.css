@@ -1,0 +1,48 @@
+.blog-post-detail {
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+}
+
+.post-detail-card {
+  border: 1px solid #ccc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  max-width: 600px;
+  margin: auto;
+}
+
+.post-detail-card h1 {
+  color: #c5973c;
+  text-align: center;
+}
+
+.delete-btn {
+  margin-top: 1rem;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+  justify-content: right;
+}
+
+.delete-btn:hover {
+  background-color: #c82333;
+}
+
+.goback {
+  background-color: #c5973c;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.goback:hover {
+  background-color: #8f6b20;
+}
