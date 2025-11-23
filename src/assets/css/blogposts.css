@@ -31,7 +31,6 @@
 /* Nupp postituse loomiseks */
 .create-btn {
   background-color: #c5973c;
-  color: white;
   border: none;
   padding: 0.6rem 1.2rem;
   border-radius: 6px;
@@ -46,7 +45,6 @@
 
 .fetch-button {
   background-color: #c5973c;
-  color: white;
   border: none;
   padding: 0.6rem 1.2rem;
   border-radius: 6px;

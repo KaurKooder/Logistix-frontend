@@ -33,7 +33,7 @@ const addProduct = async () => {
       category: newProductCategory.value,
       name: newProductName.value,
       description: newProductDescription.value,
-      price: parseFloat(newProductPrice.value),
+      price: Number.parseFloat(newProductPrice.value),
     });
     products.value.push(response.data);
     newProductCategory.value ='';

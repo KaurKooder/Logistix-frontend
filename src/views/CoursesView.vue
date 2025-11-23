@@ -1,27 +1,21 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import apiClient from '@/services/api';
 import "@/assets/css/courses.css";
+
+const router = useRouter();
 
 // Courses list
 const courses = ref([]);
 const totalPages = ref(1);
 
-// Admin create course
-const newCourse = ref({
-  name: "",
-  category: "",
-  description: "",
-  price: "",
-  date: "",  // ✅ Single date for the course
-});
-
 // Filter + pagination state
 const filter = ref({
   name: "",
   category: "",
-  startDate: "",  // ✅ Search FROM this date
-  endDate: "",    // ✅ Search TO this date
+  startDate: "",
+  endDate: "",
   page: 0,
   size: 5,
   sortBy: "name",
@@ -30,19 +24,31 @@ const filter = ref({
 
 // Decode JWT token to get user info
 function getUserFromToken() {
-  const token = localStorage.getItem('jwt');
-  if (!token) return null;
+  const token = localStorage.getItem("jwt");
+  if (!token) {
+    return null;
+  }
+
   try {
-    const payload = token.split('.')[1];
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      return null; // invalid token format
+    }
+
+    const payload = parts[1];
     const decoded = JSON.parse(atob(payload));
+
     return {
-      name: decoded.sub,
-      userId: decoded.userId,
-      role: decoded.roles?.[0],
-      ...decoded
+      name: decoded.sub || null,
+      userId: decoded.userId || null,
+      role: decoded.roles?.[0] || null
     };
-  } catch (e) { return null; }
+  } catch (e) {
+    console.error("Failed to decode token:", e);
+    return null;
+  }
 }
+
 
 const user = computed(() => getUserFromToken());
 const isLoggedIn = computed(() => user.value !== null);
@@ -59,39 +65,6 @@ async function loadCoursesFiltered() {
     totalPages.value = res.data.totalPages;
   } catch (error) {
     console.error("Error loading courses:", error);
-  }
-}
-
-// Admin functions
-async function createCourse() {
-  if (!newCourse.value.name) return alert("Lisa vähemalt nimi!");
-  try {
-    // ✅ Map single date to both startDate and endDate for backend
-    const courseData = {
-      name: newCourse.value.name,
-      category: newCourse.value.category,
-      description: newCourse.value.description,
-      price: newCourse.value.price,
-      startDate: newCourse.value.date,  // Same date for both
-      endDate: newCourse.value.date,    // Same date for both
-    };
-
-    await apiClient.post('/courses', courseData);
-    newCourse.value = { name: "", category: "", description: "", price: "", date: "" };
-    loadCoursesFiltered();
-  } catch (error) {
-    console.error("Error creating course:", error);
-  }
-}
-
-async function deleteCourse(courseId) {
-  if (!confirm("Kas oled kindel, et soovid selle kursuse kustutada?")) return;
-  try {
-    await apiClient.delete(`/courses/${courseId}`);
-    loadCoursesFiltered();
-  } catch (error) {
-    console.error("Error deleting course:", error);
-    alert("Viga kursuse kustutamisel!");
   }
 }
 
@@ -124,15 +97,23 @@ function prevPage() {
   }
 }
 
+// Navigate to add course page
+function goToAddCourse() {
+  router.push('/courses/add');
+}
+
 // Initial load
 onMounted(loadCoursesFiltered);
 </script>
-
 
 <template>
   <div class="courses">
     <div class="header">
       <h1>Koolitused</h1>
+      <!-- Admin button to add courses -->
+      <button v-if="isAdmin" @click="goToAddCourse" class="add-course-btn">
+        + Lisa uus koolitus
+      </button>
     </div>
 
     <!-- Show role info only if logged in -->
@@ -145,19 +126,6 @@ onMounted(loadCoursesFiltered);
     <p v-else class="role-info">
       <strong>Külalisvaade</strong> - Logi sisse, et registreeruda koolitustele
     </p>
-
-    <!-- ADMINI OSA - only for admins -->
-    <div v-if="isAdmin" class="admin-section">
-      <h2>Lisa uus koolitus</h2>
-      <div class="form">
-        <input v-model="newCourse.name" placeholder="Nimi" />
-        <input v-model="newCourse.category" placeholder="Kategooria" />
-        <input v-model="newCourse.description" placeholder="Kirjeldus" />
-        <input v-model.number="newCourse.price" placeholder="Hind (€)" />
-        <input v-model="newCourse.date" type="date" placeholder="Kuupäev" />
-        <button @click="createCourse">Lisa</button>
-      </div>
-    </div>
 
     <div class="filter-section">
       <h3>Otsi koolitusi</h3>
@@ -176,13 +144,11 @@ onMounted(loadCoursesFiltered);
       <button @click="loadCoursesFiltered">Otsi</button>
     </div>
 
-
     <div class="pagination">
       <button @click="prevPage" :disabled="filter.page === 0">Eelmine</button>
       <span>Leht {{ filter.page + 1 }} / {{ totalPages }}</span>
       <button @click="nextPage" :disabled="filter.page >= totalPages - 1">Järgmine</button>
     </div>
-
 
     <!-- KOOLITUSTE NIMEKIRI -->
     <div class="course-list">
@@ -201,11 +167,6 @@ onMounted(loadCoursesFiltered);
           </button>
         </template>
 
-        <!-- Delete button - only for admins -->
-        <button v-if="isAdmin" @click="deleteCourse(c.id)" class="delete-btn">
-          Kustuta
-        </button>
-
         <!-- Message for guests -->
         <p v-if="!isLoggedIn" class="guest-message">
           <em>Logi sisse, et registreeruda</em>
@@ -214,3 +175,26 @@ onMounted(loadCoursesFiltered);
     </div>
   </div>
 </template>
+
+<style scoped>
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.add-course-btn {
+  background-color: #4CAF50;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.add-course-btn:hover {
+  background-color: #45a049;
+}
+</style>
