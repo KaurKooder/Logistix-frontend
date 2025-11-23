@@ -6,6 +6,7 @@ import EShopView from "@/views/EShopView.vue";
 import CoursesView from "@/views/CoursesView.vue";
 import SingleBlogPostView from "@/views/SingleBlogPostView.vue";
 import CreatePost from "@/views/CreatePost.vue";
+import CoursesAddView from "@/views/CoursesAddView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,6 +54,11 @@ const router = createRouter({
       path: '/courses',
       name: 'Courses',
       component: CoursesView
+    },
+    {
+      path: '/courses/add',
+      name: 'CreateCourse',
+      component: CoursesAddView
     }
   ],
 })
