@@ -18,17 +18,24 @@ const isLoggedIn = computed(() => {
 
 // Get username from token
 const getUsername = () => {
-  const token = localStorage.getItem('jwt')
-  if (!token) return null
+  const token = localStorage.getItem("jwt");
+  if (!token) return null;
 
   try {
-    const payload = token.split('.')[1]
-    const decoded = JSON.parse(atob(payload))
-    return decoded.sub // username is in 'sub' field
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      console.warn("Invalid JWT format");
+      return null;
+    }
+
+    const decoded = JSON.parse(atob(parts[1]));
+    return decoded.sub || null; // username is in 'sub' field
   } catch (error) {
-    return null
+    console.error("Failed to decode JWT:", error);
+    return null;
   }
-}
+};
+
 
 const currentUsername = computed(() => getUsername())
 
