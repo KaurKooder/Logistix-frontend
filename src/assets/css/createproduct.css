@@ -1,0 +1,55 @@
+.create-product-page {
+  max-width: 500px;
+  margin: 60px auto;
+  padding: 32px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+.create-product-page h1 {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* Inputid ja textarea */
+.create-product-page input,
+.create-product-page textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.create-product-page textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Focus efekt */
+.create-product-page input:focus,
+.create-product-page textarea:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+/* Nupp */
+.create-product-page button {
+  width: 100%;
+  padding: 12px;
+  background-color: #2ecc71;
+  color: white;
+  font-size: 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.create-product-page button:hover {
+  background-color: #27ae60;
+}
