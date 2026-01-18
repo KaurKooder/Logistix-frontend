@@ -8,6 +8,8 @@ import SingleBlogPostView from "@/views/SingleBlogPostView.vue";
 import CreatePost from "@/views/CreatePost.vue";
 import CoursesAddView from "@/views/CoursesAddView.vue";
 import EShopAddProduct from "@/views/EShopAddProduct.vue";
+import CartView from "@/views/CartView.vue";
+import OrderView from "@/views/OrderView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,6 +67,16 @@ const router = createRouter({
       path: '/courses/add',
       name: 'CreateCourse',
       component: CoursesAddView
+    },
+    {
+      path: '/cart',
+      name: 'Cart',
+      component: CartView
+    },
+    {
+      path: '/orders',
+      name: 'Orders',
+      component: OrderView
     }
   ],
 })

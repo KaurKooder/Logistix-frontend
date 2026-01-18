@@ -21,7 +21,7 @@ Kõigepealt kontrollige kas node.js on arvutisse installitud:
 * tehke intellij-s restart
 
 ## Frontend poole käivitamine
-* avage intellij-s terminal ja sisestage commandid: npm install ning npm install axios
+* avage intellij-s terminal ja sisestage commandid: npm install ning npm install axios, npm install pinia
 * kontrollige kas backend poolel application käib
 * sisestage command: npm run dev ja siis peaks tulema localhost link
 * ! kui mingil põhjusel ei tööta, siis võib proovida commandi: npm run build ja seejärel npm run dev

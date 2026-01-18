@@ -121,3 +121,26 @@
 .delete-product-btn:hover {
   background-color: #c0392b;
 }
+
+.add-to-cart-btn {
+  background-color: #1abc9c; /* türkiissinine / roheline */
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+  width: 100%;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.add-to-cart-btn:hover {
+  background-color: #16a085;
+  transform: translateY(-1px);
+}
+
+.add-to-cart-btn:active {
+  transform: translateY(0);
+}

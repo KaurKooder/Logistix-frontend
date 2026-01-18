@@ -2,6 +2,9 @@
 import { ref, onMounted } from 'vue';
 import apiClient from '@/services/api'
 import "@/assets/css/eshop.css";
+import { useCartStore } from '@/stores/cart';
+
+const cartStore = useCartStore()
 
 const products = ref([]);
 const productIdToFetch = ref('');
@@ -10,7 +13,7 @@ const selectedProduct = ref(null);
 const fetchProducts = async () => {
   const response = await apiClient.get('/products')
   products.value = response.data;
-};
+}
 
 const fetchProductById = async () => {
   try {
@@ -20,7 +23,7 @@ const fetchProductById = async () => {
     selectedProduct.value = null;
     console.error('Product not found:', error);
   }
-};
+}
 
 const deleteProduct = async (id) => {
   try {
@@ -29,9 +32,18 @@ const deleteProduct = async (id) => {
   } catch (error) {
     console.error('Error deleting product:', error);
   }
-};
+}
 
-onMounted(fetchProducts);
+// Lisa ostukorvi (vaikimisi kogus 1)
+const addToCart = async (productId) => {
+  await cartStore.addToCart(productId, 1)
+  alert('Toode lisatud ostukorvi!')
+}
+
+onMounted(() => {
+  fetchProducts()
+  cartStore.fetchCart()
+})
 </script>
 
 <template>
@@ -66,6 +78,7 @@ onMounted(fetchProducts);
           <p>{{ selectedProduct.description }}</p>
           <p><i>Kategooria:</i> {{ selectedProduct.category }}</p>
           <p><i>Hind:</i> €{{ selectedProduct.price }}</p>
+          <button class="add-to-cart-btn" @click="addToCart(selectedProduct.id)">Lisa ostukorvi</button>
         </div>
 
         <div v-else-if="productIdToFetch">
@@ -83,6 +96,7 @@ onMounted(fetchProducts);
         </div>
         <p>{{ product.description }}</p>
         <p><i>Hind:</i> €{{ product.price }}</p>
+        <button class="add-to-cart-btn" @click="addToCart(product.id)">Lisa ostukorvi</button>
       </div>
     </div>
 
