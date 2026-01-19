@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import apiClient from '@/services/api'
 import "@/assets/css/eshop.css";
 import { useCartStore } from '@/stores/cart';
@@ -10,12 +10,42 @@ const products = ref([]);
 const productIdToFetch = ref('');
 const selectedProduct = ref(null);
 
+// Reaktiivsuse päästik (trigger), et Vue teaks localStorage muutusest
+const authState = ref(0)
+
+// SonarQube-sõbralik admini kontroll
+const isAdmin = computed(() => {
+  // console.debug täidab Sonari nõude (funktsiooni kutse) ja Vue nõude (lugemine)
+  console.debug("Checking admin status for Eshop, state:", authState.value);
+
+  const token = localStorage.getItem("jwt");
+  if (!token) return false;
+
+  try {
+    const parts = token.split(".");
+    if (parts.length < 3) return false;
+
+    const decoded = JSON.parse(atob(parts[1]));
+
+    // Kontrollime rolle ja tagastame tõeväärtuse
+    return Array.isArray(decoded.roles) && decoded.roles.includes('ROLE_ADMIN');
+  } catch (error) {
+    console.error("JWT decoding failed in Eshop:", error);
+    return false;
+  }
+});
+
 const fetchProducts = async () => {
-  const response = await apiClient.get('/products')
-  products.value = response.data;
+  try {
+    const response = await apiClient.get('/products')
+    products.value = response.data;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+  }
 }
 
 const fetchProductById = async () => {
+  if (!productIdToFetch.value) return;
   try {
     const response = await apiClient.get(`/products/${productIdToFetch.value}`)
     selectedProduct.value = response.data;
@@ -26,31 +56,42 @@ const fetchProductById = async () => {
 }
 
 const deleteProduct = async (id) => {
+  if (!confirm('Kas oled kindel, et soovid toote kustutada?')) return;
+
   try {
     await apiClient.delete(`/products/${id}`);
     products.value = products.value.filter(p => p.id !== id);
+    // Kui kustutatud toode oli parajasti otsingus lahti, tühjendame selle ka
+    if (selectedProduct.value && selectedProduct.value.id === id) {
+      selectedProduct.value = null;
+    }
   } catch (error) {
     console.error('Error deleting product:', error);
   }
 }
 
-// Lisa ostukorvi (vaikimisi kogus 1)
 const addToCart = async (productId) => {
-  await cartStore.addToCart(productId, 1)
-  alert('Toode lisatud ostukorvi!')
+  try {
+    await cartStore.addToCart(productId, 1)
+    alert('Toode lisatud ostukorvi!')
+  } catch (error) {
+    console.error('Error adding to cart:', error);
+    alert('Ostukorvi lisamine ebaõnnestus. Kas oled sisse logitud?');
+  }
 }
 
 onMounted(() => {
   fetchProducts()
   cartStore.fetchCart()
+  // Igaks juhuks uuendame authState-i, et isAdmin uuesti arvutataks
+  authState.value++
 })
 </script>
 
 <template>
   <div class="shop-page">
 
-    <!-- Lisa toode nupp -->
-    <div class="button-align">
+    <div v-if="isAdmin" class="button-align">
       <router-link to="/products/create">
         <button class="create-product-btn">Lisa uus toode</button>
       </router-link>
@@ -59,7 +100,6 @@ onMounted(() => {
     <div class="shop-header">
       <h1>E-pood</h1>
 
-      <!-- Otsing ID järgi -->
       <div class="fetch-product">
         <div class="fetch-alignment">
           <input
@@ -81,18 +121,24 @@ onMounted(() => {
           <button class="add-to-cart-btn" @click="addToCart(selectedProduct.id)">Lisa ostukorvi</button>
         </div>
 
-        <div v-else-if="productIdToFetch">
+        <div v-else-if="productIdToFetch && !selectedProduct">
           <p>Toodet ei leitud.</p>
         </div>
       </div>
     </div>
 
-    <!-- Kõik tooted -->
     <div class="shop-grid">
       <div v-for="product in products" :key="product.id" class="shop-card">
         <div class="product-header">
           <h3>{{ product.name }}</h3>
-          <button class="delete-product-btn" @click="deleteProduct(product.id)">Kustuta</button>
+
+          <button
+            v-if="isAdmin"
+            class="delete-product-btn"
+            @click="deleteProduct(product.id)"
+          >
+            Kustuta
+          </button>
         </div>
         <p>{{ product.description }}</p>
         <p><i>Hind:</i> €{{ product.price }}</p>
