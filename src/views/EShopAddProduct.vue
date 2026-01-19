@@ -27,18 +27,57 @@ const addProduct = async () => {
 </script>
 
 <template>
-  <div class="create-product-page">
-    <h1>Lisa uus toode</h1>
+  <div class="product-add-view-outer-container">
+    <div class="product-add-view-paper-block">
 
-    <input v-model="newProductName" placeholder="Toote nimi" />
-    <input v-model="newProductCategory" placeholder="Kategooria" />
-    <textarea v-model="newProductDescription" placeholder="Kirjeldus"></textarea>
-    <input type="number" v-model="newProductPrice" placeholder="Hind (€)" />
+      <header class="product-add-view-header-section">
+        <h1 class="product-add-view-page-title">LISA UUS TOODE</h1>
+      </header>
 
-    <button @click="addProduct">Lisa toode</button>
+      <div class="product-add-view-form">
+        <div class="product-add-view-field">
+          <label class="product-add-view-label">Toote nimi *</label>
+          <input
+            v-model="newProductName"
+            class="product-add-view-input"
+            placeholder="Sisesta toote nimi..."
+          />
+        </div>
+
+        <div class="product-add-view-field">
+          <label class="product-add-view-label">Kategooria</label>
+          <input
+            v-model="newProductCategory"
+            class="product-add-view-input"
+            placeholder="Kategooria (nt. Raamatud, Mängud)"
+          />
+        </div>
+
+        <div class="product-add-view-field">
+          <label class="product-add-view-label">Kirjeldus</label>
+          <textarea
+            v-model="newProductDescription"
+            class="product-add-view-textarea"
+            placeholder="Toote lühikirjeldus..."
+          ></textarea>
+        </div>
+
+        <div class="product-add-view-field">
+          <label class="product-add-view-label">Hind (€) *</label>
+          <input
+            type="number"
+            v-model="newProductPrice"
+            class="product-add-view-input"
+            placeholder="0.00"
+          />
+        </div>
+
+        <div class="product-add-view-actions">
+          <button class="product-add-view-cancel-btn" @click="$router.push('/products')">Tühista</button>
+          <button class="product-add-view-submit-btn" @click="addProduct">Lisa toode</button>
+        </div>
+      </div>
+
+    </div>
   </div>
 </template>
-
-<style scoped>
-
-</style>

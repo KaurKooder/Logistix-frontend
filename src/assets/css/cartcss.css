@@ -1,92 +1,172 @@
-.cart-page {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 32px 20px;
+/* Taust ja konteiner */
+.cart-view-outer-container {
+  background-color: #F5E9D0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
   font-family: Arial, sans-serif;
 }
 
-.cart-page h1 {
-  margin-bottom: 24px;
+.cart-view-paper-block {
+  background-color: #ffffff;
+  max-width: 1000px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
 }
 
-/* Grid */
-.cart-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+/* Päis ja joon */
+.cart-view-header-section {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 10px;
 }
 
-/* Ostukorvi toote kaart */
-.cart-item-card {
-  background: #fff;
-  padding: 18px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+.cart-view-page-title {
+  font-weight: 300;
+  font-size: 2.2rem;
+  color: #d4a76a;
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
-.cart-item-card h3 {
-  margin-bottom: 10px;
+/* Toote read */
+.cart-view-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* Read on üksteise vastas */
 }
 
-.cart-item-card p {
-  margin: 8px 0;
-  color: #555;
+.cart-view-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-/* Koguse input */
-.cart-item-card input[type="number"] {
-  width: 70px;
-  padding: 6px;
-  margin-left: 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+.cart-view-item-name {
+  color: #d4a76a;
+  margin: 0 0 5px 0;
+  font-size: 1.2rem;
 }
 
-/* Eemalda nupp */
-.remove-btn {
-  margin-top: 12px;
-  background-color: #e74c3c;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
+.cart-view-item-price {
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.cart-view-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.cart-view-quantity-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cart-view-quantity-input {
+  width: 60px;
+  padding: 8px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.cart-view-row-total {
+  min-width: 120px;
+  text-align: right;
+  color: #b55a30;
+}
+
+.cart-view-remove-btn {
+  background: transparent;
+  color: #e74c3c;
+  border: 1px solid #e74c3c;
+  padding: 6px 12px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.2s ease;
+  font-size: 0.85rem;
+  transition: all 0.2s;
 }
 
-.remove-btn:hover {
-  background-color: #c0392b;
+.cart-view-remove-btn:hover {
+  background: #e74c3c;
+  color: white;
 }
 
 /* Kokkuvõte */
-.cart-summary {
-  grid-column: 1 / -1;
-  background: #f9f9f9;
-  border-top: 3px solid #1abc9c;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: right;
+.cart-view-summary-section {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 20px;
 }
 
-.cart-summary h3 {
-  margin-bottom: 12px;
+.cart-view-total-box {
+  display: flex;
+  gap: 20px;
+  align-items: baseline;
 }
 
-/* Checkout nupp */
-.checkout-btn {
-  background-color: #1abc9c;
+.cart-view-total-label {
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cart-view-total-amount {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #d4a76a;
+}
+
+.cart-view-checkout-btn {
+  background-color: #b55a30; /* Punakas-pruun toon */
   color: white;
   border: none;
-  padding: 12px 22px;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: 600;
+  padding: 15px 40px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 1.1rem;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: background 0.2s;
 }
 
-.checkout-btn:hover {
-  background-color: #16a085;
-  transform: translateY(-1px);
+.cart-view-checkout-btn:hover {
+  background-color: #944825;
+}
+
+.cart-view-empty {
+  text-align: center;
+  padding: 40px;
+}
+
+.cart-view-back-link {
+  color: #d4a76a;
+  text-decoration: underline;
+  margin-top: 10px;
+  display: block;
+}
+
+/* Mobiilivaade */
+@media (max-width: 768px) {
+  .cart-view-item-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  .cart-view-item-controls {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
 }

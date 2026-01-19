@@ -113,84 +113,265 @@ const logout = () => {
 </script>
 
 <template>
-  <div class="login-page">
+  <div class="auth-view-outer-container">
+    <div class="auth-view-paper-block">
 
-    <div v-if="isLoggedIn" class="logged-in-section">
-      <h2>Tere, <strong>{{ currentUsername }}</strong>!</h2>
-      <div class="button-group">
-        <button @click="logout" class="logout-btn">Logi välja</button>
-        <button @click="router.push('/courses')" class="courses-btn">Koolituste lehele</button>
-      </div>
+      <header class="auth-view-header-section">
+        <h1 class="auth-view-page-title">
+          {{ isLoggedIn ? 'KASUTAJA INFO' : (mode === 'login' ? 'LOGI SISSE' : 'LOO KONTO') }}
+        </h1>
+      </header>
 
-      <div v-if="isAdmin" class="admin-controls">
-        <hr />
-        <button @click="mode = (mode === 'register' ? 'login' : 'register')" class="admin-toggle-btn">
-          {{ mode === 'register' ? 'Sulge loomise vorm' : 'Loo uus kasutaja / Admin' }}
-        </button>
+      <div class="auth-view-body">
+
+        <div v-if="isLoggedIn" class="auth-view-logged-in">
+          <h2 class="auth-view-welcome">Tere tulemast, <strong>{{ currentUsername }}</strong>!</h2>
+
+          <div class="auth-view-button-group">
+            <button @click="router.push('/courses')" class="auth-view-nav-btn">Koolituste lehele</button>
+            <button @click="logout" class="auth-view-logout-btn">Logi välja</button>
+          </div>
+
+          <div v-if="isAdmin" class="auth-view-admin-area">
+            <div class="auth-view-divider"></div>
+            <button @click="mode = (mode === 'register' ? 'login' : 'register')" class="auth-view-admin-toggle">
+              {{ mode === 'register' ? 'Sulge vorm' : 'Loo uus Kasutaja / Admin' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="!isLoggedIn || (isAdmin && mode === 'register')" class="auth-view-form-container">
+
+          <div class="auth-view-form">
+            <div class="auth-view-field">
+              <label class="auth-view-label">Kasutajatunnus</label>
+              <input v-model="name" class="auth-view-input" placeholder="Sisesta nimi" />
+            </div>
+
+            <div class="auth-view-field">
+              <label class="auth-view-label">Parool</label>
+              <input v-model="password" type="password" class="auth-view-input" placeholder="******" />
+            </div>
+
+            <div v-if="isAdmin && mode === 'register'" class="auth-view-field">
+              <label class="auth-view-label">Määra roll uuele kasutajale</label>
+              <select v-model="role" class="auth-view-select">
+                <option value="USER">Tavakasutaja (USER)</option>
+                <option value="ADMIN">Administraator (ADMIN)</option>
+              </select>
+            </div>
+
+            <button @click="submit" class="auth-view-submit-btn">
+              {{ mode === 'login' ? 'SISENE' : 'SALVESTA KASUTAJA' }}
+            </button>
+          </div>
+
+          <p v-if="message" class="auth-view-status-message">{{ message }}</p>
+
+          <button v-if="!isLoggedIn" class="auth-view-switch-link" @click="switchMode">
+            {{ mode === 'login' ? "Puudub konto? Registreeru siin" : "Konto olemas? Logi sisse" }}
+          </button>
+        </div>
+
       </div>
     </div>
-
-    <div v-if="!isLoggedIn || (isAdmin && mode === 'register')" class="form-container">
-      <h1>{{ mode === 'login' ? 'Logi sisse' : 'Loo uus konto' }}</h1>
-
-      <div class="form">
-        <div class="input-group">
-          <input v-model="name" placeholder="Kasutajatunnus" />
-        </div>
-        <div class="input-group">
-          <input v-model="password" type="password" placeholder="Parool" />
-        </div>
-
-        <div v-if="isAdmin && mode === 'register'" class="role-selector">
-          <label for="role-select">Määra roll uuele kasutajale:</label>
-          <select id="role-select" v-model="role">
-            <option value="USER">Tavakasutaja (USER)</option>
-            <option value="ADMIN">Adminstraator (ADMIN)</option>
-          </select>
-        </div>
-
-        <button @click="submit" class="submit-btn">
-          {{ mode === 'login' ? 'Sisenen' : 'Salvesta kasutaja' }}
-        </button>
-      </div>
-
-      <p class="status-message">{{ message }}</p>
-
-      <button v-if="!isLoggedIn" class="switch" @click="switchMode">
-        {{ mode === 'login' ? "Puudub konto? Registreeru siin" : "Konto olemas? Logi sisse" }}
-      </button>
-    </div>
-
   </div>
 </template>
 
 <style scoped>
-/* Lisa siia mõned täiendavad stiilid paremaks navigeerimiseks */
-.logged-in-section {
-  background: #f4f4f4;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+/* Taust ja üldine raamistik */
+.auth-view-outer-container {
+  background-color: #F5E9D0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
+}
+
+.auth-view-paper-block {
+  background-color: #ffffff;
+  max-width: 600px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
+}
+
+/* Päis ja joon */
+.auth-view-header-section {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 10px;
   text-align: center;
 }
-.button-group, .admin-controls {
-  margin-top: 10px;
+
+.auth-view-page-title {
+  font-weight: 300;
+  font-size: 2rem;
+  color: #d4a76a;
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Üldine nuppude seadistus animatsioonideks */
+button {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  outline: none;
+}
+
+button:active {
+  transform: translateY(2px);
+}
+
+/* Sisselogitud vaade */
+.auth-view-welcome {
+  text-align: center;
+  margin-bottom: 30px;
+  font-weight: 300;
+}
+
+.auth-view-button-group {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  flex-direction: column;
+  gap: 15px;
 }
-.role-selector {
-  margin: 15px 0;
-  text-align: left;
-}
-.role-selector select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-}
-.status-message {
-  margin-top: 15px;
-  color: #d32f2f;
+
+.auth-view-nav-btn {
+  background-color: #d4a76a;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
   font-weight: bold;
+}
+
+.auth-view-nav-btn:hover {
+  background-color: #b88f55;
+  box-shadow: 0 4px 8px rgba(184, 143, 85, 0.3);
+}
+
+.auth-view-logout-btn {
+  background-color: transparent;
+  color: #b55a30;
+  border: 2px solid #b55a30; /* Tegin piirjoone veidi tugevamaks */
+  padding: 11px; /* Kompenseerin piirjoont */
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.auth-view-logout-btn:hover {
+  background-color: #b55a30;
+  color: white;
+}
+
+/* Vormi elemendid */
+.auth-view-field {
+  margin-bottom: 20px;
+}
+
+.auth-view-label {
+  display: block;
+  font-weight: bold;
+  color: #b55a30;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.auth-view-input, .auth-view-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: #fdfcf9;
+  font-size: 1rem;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.auth-view-input:focus {
+  border-color: #d4a76a;
+}
+
+.auth-view-submit-btn {
+  width: 100%;
+  background-color: #d4a76a;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 10px;
+  letter-spacing: 1px;
+}
+
+.auth-view-submit-btn:hover {
+  background-color: #b88f55;
+  box-shadow: 0 5px 12px rgba(184, 143, 85, 0.4);
+  transform: translateY(-2px);
+}
+
+.auth-view-submit-btn:active {
+  transform: translateY(1px);
+}
+
+.auth-view-status-message {
+  text-align: center;
+  margin-top: 20px;
+  color: #b55a30;
+  font-weight: bold;
+}
+
+.auth-view-switch-link {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #999;
+  margin-top: 25px;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.auth-view-switch-link:hover {
+  color: #d4a76a;
+}
+
+/* Admini ala */
+.auth-view-divider {
+  height: 1px;
+  background-color: #eee;
+  margin: 30px 0;
+}
+
+.auth-view-admin-toggle {
+  width: 100%;
+  background-color: #4a4a4a;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.auth-view-admin-toggle:hover {
+  background-color: #333;
+  letter-spacing: 0.5px;
+}
+
+/* Mobiilivaade */
+@media (max-width: 600px) {
+  .auth-view-paper-block {
+    padding: 30px 20px;
+  }
 }
 </style>
