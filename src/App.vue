@@ -1,5 +1,13 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import { onMounted } from 'vue'
+import { useCartStore } from '@/stores/cart'
+
+const cartStore = useCartStore()
+
+onMounted(() => {
+  cartStore.fetchCart()
+})
 </script>
 
 <template>
@@ -15,6 +23,17 @@ import { RouterLink, RouterView } from 'vue-router'
         <RouterLink to="/posts">Blogi ja artiklid</RouterLink>
         <RouterLink to="/products">E-pood</RouterLink>
         <RouterLink to="/courses">Koolitused</RouterLink>
+
+        <RouterLink to="/cart" class="cart-link">
+          🛒
+          <span
+            v-if="cartStore.cart?.items?.length"
+            class="cart-badge"
+          >
+            {{ cartStore.cart.items.length }}
+          </span>
+        </RouterLink>
+        <RouterLink to="/orders">Minu tellimused</RouterLink>
       </nav>
   </header>
   <RouterView />
@@ -51,4 +70,19 @@ import { RouterLink, RouterView } from 'vue-router'
 .nav-menu a:hover {
   color: #222222;
 }
+
+.cart-link {
+  position: relative;
+}
+
+.cart-badge {
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 7px;
+  font-size: 12px;
+  margin-left: 6px;
+  vertical-align: top;
+}
+
 </style>
