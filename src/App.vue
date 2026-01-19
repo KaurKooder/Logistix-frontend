@@ -64,7 +64,7 @@ onMounted(() => {
 
 .nav-menu a {
   text-decoration: none;
-  color: #c69a4b; /* kuldne toon */
+  color: #c69a4b;
   font-weight: 500;
 }
 
@@ -78,7 +78,7 @@ onMounted(() => {
 
 .cart-badge {
   background-color: #e74c3c;
-  color: white;
+  color: #1a1a1a;
   border-radius: 50%;
   padding: 2px 7px;
   font-size: 12px;
