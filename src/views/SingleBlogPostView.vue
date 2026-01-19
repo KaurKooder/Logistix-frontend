@@ -36,17 +36,31 @@ onMounted(fetchPost);
 </script>
 
 <template>
-  <div class="blog-post-detail">
-    <button class="goback" @click="goBack">← Back to all posts</button>
+  <div class="post-view-outer-container">
+    <div class="post-view-paper-block">
 
-    <div v-if="post" class="post-detail-card">
-      <h1>{{ post.title }}</h1>
-      <p>{{ post.content }}</p>
-      <button @click="deletePost" class="delete-btn">Kustuta postitus</button>
-    </div>
+      <div class="post-view-navigation">
+        <button class="post-view-back-btn" @click="goBack">← Tagasi blogisse</button>
+      </div>
 
-    <div v-else>
-      <p>Post not found.</p>
+      <div v-if="post">
+        <header class="post-view-header-section">
+          <h1 class="post-view-page-title">{{ post.title }}</h1>
+        </header>
+
+        <article class="post-view-content-body">
+          <p class="post-view-text">{{ post.content }}</p>
+        </article>
+
+        <footer class="post-view-footer">
+          <button @click="deletePost" class="post-view-delete-btn">Kustuta postitus</button>
+        </footer>
+      </div>
+
+      <div v-else class="post-view-not-found">
+        <p>Postitust ei leitud.</p>
+      </div>
+
     </div>
   </div>
 </template>

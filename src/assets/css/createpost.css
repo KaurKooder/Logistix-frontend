@@ -1,52 +1,124 @@
-.create-post-page {
-  max-width: 600px;
-  margin: 2rem auto;
+/* Taust ja konteiner */
+.create-view-outer-container {
+  background-color: #F5E9D0; /* Tume beež taust piltidelt */
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #222;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
 }
 
-.create-post-page h1 {
-  color: #c5973c;
+.create-view-paper-block {
+  background-color: #ffffff;
+  max-width: 800px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
 }
-.create-post-page input,
-.create-post-page textarea {
-  margin-bottom: 1rem;
+
+/* Päis ja joon */
+.create-view-header-section {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 10px;
+}
+
+.create-view-page-title {
+  font-weight: 300;
+  font-size: 2.2rem;
+  color: #d4a76a; /* Kuldne toon piltidelt */
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Vormi elemendid */
+.create-view-field {
+  margin-bottom: 25px;
+}
+
+.create-view-label {
+  display: block;
+  font-weight: bold;
+  color: #b55a30; /* Punakas-pruun toon */
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.create-view-input,
+.create-view-textarea {
+  width: 100%;
   padding: 12px 15px;
   font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: #fdfcf9;
   outline: none;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-  transition: all 0.2s ease;
-  resize: none;
-  width: 100%;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #fff;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
-.create-post-page input:focus,
-.create-post-page textarea:focus {
-  border-color: #a17b28;
-  box-shadow: 0 0 0 3px rgba(161,123,40,0.2);
+.create-view-input:focus,
+.create-view-textarea:focus {
+  border-color: #d4a76a;
 }
 
-.create-post-page textarea {
-  min-height: 150px;
+.create-view-textarea {
+  min-height: 250px;
+  resize: vertical;
 }
-.create-post-page button {
-  background-color: #c5973c;
-  padding: 0.6rem 1.5rem;
-  width: 200px;
-  border-radius: 6px;
-  font-size: 1rem;
+
+/* Nupud */
+.create-view-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.create-view-submit-btn {
+  background-color: #d4a76a;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
   transition: background 0.2s;
-  align-self: center;
-  margin-top: 1rem;
 }
 
-.create-post-page button:hover {
-  background-color: #8f6b20;
+.create-view-submit-btn:hover {
+  background-color: #b88f55;
+}
+
+.create-view-cancel-btn {
+  background-color: transparent;
+  color: #999;
+  border: 1px solid #ddd;
+  padding: 12px 25px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.create-view-cancel-btn:hover {
+  background-color: #eee;
+  color: #666;
+}
+
+/* Mobiili kohandused */
+@media (max-width: 600px) {
+  .create-view-paper-block {
+    padding: 30px 20px;
+  }
+  .create-view-actions {
+    flex-direction: column-reverse;
+  }
+  .create-view-submit-btn,
+  .create-view-cancel-btn {
+    width: 100%;
+  }
 }

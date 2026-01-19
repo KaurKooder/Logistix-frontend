@@ -23,10 +23,38 @@ const addPost = async () => {
 </script>
 
 <template>
-  <div class="create-post-page">
-    <h1>Loo uus postitus</h1>
-    <input v-model="newPostTitle" placeholder="Postituse pealkiri" />
-    <textarea v-model="newPostContent" placeholder="Postituse sisu..."></textarea>
-    <button @click="addPost">Loo postitus</button>
+  <div class="create-view-outer-container">
+    <div class="create-view-paper-block">
+
+      <header class="create-view-header-section">
+        <h1 class="create-view-page-title">LOO UUS POSTITUS</h1>
+      </header>
+
+      <div class="create-view-form">
+        <div class="create-view-field">
+          <label class="create-view-label">Pealkiri</label>
+          <input
+            v-model="newPostTitle"
+            class="create-view-input"
+            placeholder="Sisesta postituse pealkiri..."
+          />
+        </div>
+
+        <div class="create-view-field">
+          <label class="create-view-label">Sisu</label>
+          <textarea
+            v-model="newPostContent"
+            class="create-view-textarea"
+            placeholder="Kirjuta siia postituse sisu..."
+          ></textarea>
+        </div>
+
+        <div class="create-view-actions">
+          <button class="create-view-cancel-btn" @click="$router.push('/posts')">Tühista</button>
+          <button class="create-view-submit-btn" @click="addPost">Loo postitus</button>
+        </div>
+      </div>
+
+    </div>
   </div>
 </template>

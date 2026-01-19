@@ -1,154 +1,141 @@
-/* Blogi lehe konteiner */
-.blog-page {
-  max-width: 80%;
-  margin: 0 auto;
-  padding: 60px 20px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #222;
-}
-
-/* Blogi päis */
-.blog-header {
-  text-align: center;
-  margin-bottom: 50px;
+/* Taust ja konteiner */
+.blog-outer-container {
+  background-color: #F5E9D0; /* Sama tume taust mis teistel lehtedel */
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: center;
-}
-
-.blog-header h1 {
-  font-size: 2.2rem;
-  color: #c5973c;
-  margin: 0;
-}
-
-.button-align {
-  display: flex;
-  justify-content: right;
-}
-
-/* Nupp postituse loomiseks */
-.create-btn {
-  background-color: #c5973c;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.create-btn:hover {
-  background-color: #8f6b20;
-}
-
-.fetch-button {
-  background-color: #c5973c;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.fetch-button:hover {
-  background-color: #8f6b20;
-}
-
-.fetch-alignment {
-  display:flex;
-  gap: 10px;
-}
-
-.fetch-input,
-input[type="number"] {
-  width: 40%;
-  padding: 10px 15px;
-  font-size: 0.95rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  outline: none;
-  transition: all 0.2s ease;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.fetch-input:focus,
-input[type="number"]:focus {
-  border-color: #a17b28; /* tumedam kuld */
-  box-shadow: 0 0 0 3px rgba(161,123,40,0.2);
-}
-
-.fetch-input::placeholder {
-  color: #999;
-  font-style: italic;
-}
-
-/* Postituste grid */
-.blog-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, 320px);
   justify-content: center;
-  gap: 50px;
+  align-items: flex-start;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
 }
 
-/* Üksik postituse kaart */
-.blog-card {
-  width: 320px;
-  height: 350px;
-  background-color: white;
-  border-radius: 10px;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.1);
-  overflow: hidden;
+.blog-paper-block {
+  background-color: #ffffff;
+  max-width: 1100px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
+}
+
+/* Päis ja joon alla */
+.blog-header-section {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 10px;
+}
+
+.blog-page-title {
+  font-weight: 300;
+  font-size: 2.2rem;
+  color: #d4a76a; /* Kuldne toon */
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Nupud ja tegevused */
+.blog-action-row {
   display: flex;
-  flex-direction: column;
+  justify-content: flex-end;
+  margin-bottom: 30px;
+}
+
+.blog-primary-btn {
+  background-color: #d4a76a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+}
+
+.blog-primary-btn:hover {
+  background-color: #b88f55;
+}
+
+/* Otsingu sektsioon */
+.blog-search-section {
+  margin-bottom: 50px;
+  padding: 20px;
+  background-color: #fcfaf5;
+  border-radius: 8px;
+}
+
+.blog-search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.blog-id-input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 200px;
+}
+
+.blog-secondary-btn {
+  background-color: #b55a30; /* Punakas-pruun toon */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Postituste Grid */
+.blog-posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.blog-post-card {
+  text-decoration: none;
+  color: inherit;
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 8px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.blog-card:hover {
+.blog-post-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+  border-color: #d4a76a;
 }
 
-/* Postituse sisu */
-.post-content {
+.blog-card-inner {
   padding: 20px;
-  flex-grow: 1;
-  overflow: hidden;
 }
 
-.post-title {
-  color: #c5973c;
-  font-size: 1.2rem;
+.blog-card-title {
+  color: #d4a76a;
+  font-size: 1.25rem;
   margin-bottom: 10px;
 }
 
-.post-content-text {
+.blog-card-text {
   font-size: 0.95rem;
-  color: #444;
   line-height: 1.5;
-  white-space: pre-wrap;
+  color: #666;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Piirab teksti 3 reaga kaardil */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.blog-grid a.blog-card {
-  display: flex;
-  flex-direction: column;
-  text-decoration: none; /* eemaldab allajoonimise */
-  color: inherit; /* säilitab teksti värvi */
-}
-
-/* Väike media query väiksematele ekraanidele */
-@media (max-width: 600px) {
-  .blog-header h1 {
-    font-size: 1.8rem;
+@media (max-width: 850px) {
+  .blog-paper-block {
+    padding: 30px 20px;
   }
-
-  .create-btn {
+  .blog-search-bar {
+    flex-direction: column;
+  }
+  .blog-id-input {
     width: 100%;
-  }
-
-  .blog-grid {
-    gap: 20px;
   }
 }
