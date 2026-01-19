@@ -100,236 +100,270 @@ function goBack() {
 </script>
 
 <template>
-  <div class="courses">
-    <div class="header">
-      <h1>Lisa uus koolitus</h1>
-      <button @click="goBack" class="back-btn">← Tagasi</button>
-    </div>
+  <div class="course-add-outer-container">
+    <div class="course-add-paper-block">
 
-    <p v-if="user" class="role-info">
-      Sisse logitud kui: <strong>Administraator</strong> ({{ user.name }})
-    </p>
+      <header class="course-add-header-section">
+        <h1 class="course-add-page-title">LISA UUS KOOLITUS</h1>
+        <button @click="goBack" class="course-add-back-btn">← Tagasi</button>
+      </header>
 
-    <!-- Success/Error messages -->
-    <div v-if="successMessage" class="success-message">
-      {{ successMessage }}
-    </div>
-    <div v-if="errorMessage" class="error-message">
-      {{ errorMessage }}
-    </div>
+      <div class="course-add-body">
+        <p v-if="user" class="course-add-role-info">
+          Sisse logitud kui: <strong>Administraator</strong> ({{ user.name }})
+        </p>
 
-    <!-- ADMINI OSA - Add course form -->
-    <div class="admin-section">
-      <div class="form">
-        <div class="form-group">
-          <label for="name">Nimi *</label>
-          <input
-            id="name"
-            v-model="newCourse.name"
-            placeholder="Koolituse nimi"
-            :disabled="isLoading"
-          />
+        <div v-if="successMessage" class="course-add-success">
+          {{ successMessage }}
+        </div>
+        <div v-if="errorMessage" class="course-add-error">
+          {{ errorMessage }}
         </div>
 
-        <div class="form-group">
-          <label for="category">Kategooria *</label>
-          <input
-            id="category"
-            v-model="newCourse.category"
-            placeholder="Kategooria"
-            :disabled="isLoading"
-          />
-        </div>
+        <div class="course-add-form">
+          <div class="course-add-field">
+            <label class="course-add-label">Koolituse nimi *</label>
+            <input
+              v-model="newCourse.name"
+              placeholder="Sisesta koolituse nimi"
+              :disabled="isLoading"
+              class="course-add-input"
+            />
+          </div>
 
-        <div class="form-group">
-          <label for="description">Kirjeldus *</label>
-          <textarea
-            id="description"
-            v-model="newCourse.description"
-            placeholder="Koolituse kirjeldus"
-            rows="4"
-            :disabled="isLoading"
-          ></textarea>
-        </div>
+          <div class="course-add-field">
+            <label class="course-add-label">Kategooria *</label>
+            <input
+              v-model="newCourse.category"
+              placeholder="Kategooria (nt. Nõustamine)"
+              :disabled="isLoading"
+              class="course-add-input"
+            />
+          </div>
 
-        <div class="form-group">
-          <label for="price">Hind (€) *</label>
-          <input
-            id="price"
-            v-model.number="newCourse.price"
-            type="number"
-            step="0.01"
-            placeholder="0.00"
-            :disabled="isLoading"
-          />
-        </div>
+          <div class="course-add-field">
+            <label class="course-add-label">Kirjeldus *</label>
+            <textarea
+              v-model="newCourse.description"
+              placeholder="Koolituse põhjalik kirjeldus..."
+              rows="6"
+              :disabled="isLoading"
+              class="course-add-textarea"
+            ></textarea>
+          </div>
 
-        <div class="form-group">
-          <label for="date">Kuupäev *</label>
-          <input
-            id="date"
-            v-model="newCourse.date"
-            type="date"
-            :disabled="isLoading"
-          />
-        </div>
+          <div class="course-add-row">
+            <div class="course-add-field">
+              <label class="course-add-label">Hind (€) *</label>
+              <input
+                v-model.number="newCourse.price"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                :disabled="isLoading"
+                class="course-add-input"
+              />
+            </div>
 
-        <div class="form-actions">
-          <button
-            @click="createCourse"
-            class="submit-btn"
-            :disabled="isLoading"
-          >
-            {{ isLoading ? 'Lisamine...' : 'Lisa koolitus' }}
-          </button>
-          <button
-            @click="goBack"
-            class="cancel-btn"
-            :disabled="isLoading"
-          >
-            Tühista
-          </button>
+            <div class="course-add-field">
+              <label class="course-add-label">Toimumisaeg *</label>
+              <input
+                v-model="newCourse.date"
+                type="date"
+                :disabled="isLoading"
+                class="course-add-input"
+              />
+            </div>
+          </div>
+
+          <div class="course-add-actions">
+            <button
+              @click="createCourse"
+              class="course-add-submit-btn"
+              :disabled="isLoading"
+            >
+              {{ isLoading ? 'Salvestamine...' : 'Salvesta koolitus' }}
+            </button>
+            <button
+              @click="goBack"
+              class="course-add-cancel-btn"
+              :disabled="isLoading"
+            >
+              Tühista
+            </button>
+          </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
 
 <style scoped>
-.header {
+/* Taust ja konteiner */
+.course-add-outer-container {
+  background-color: #F5E9D0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
+}
+
+.course-add-paper-block {
+  background-color: #ffffff;
+  max-width: 850px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
+}
+
+/* Päis ja joon */
+.course-add-header-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 30px;
+  padding-bottom: 10px;
 }
 
-.back-btn {
-  background-color: #6c757d;
+.course-add-page-title {
+  font-weight: 300;
+  font-size: 2.2rem;
+  color: #d4a76a;
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.course-add-back-btn {
+  background-color: #d4a76a;
   color: white;
-  padding: 10px 20px;
   border: none;
+  padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
-}
-
-.back-btn:hover {
-  background-color: #5a6268;
-}
-
-.admin-section {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: bold;
-  color: #333;
-}
-
-.form-group input,
-.form-group textarea {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #4CAF50;
-}
-
-.form-group input:disabled,
-.form-group textarea:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.submit-btn {
-  flex: 1;
-  background-color: #4CAF50;
-  padding: 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
   font-weight: bold;
 }
 
-.submit-btn:hover:not(:disabled) {
-  background-color: #45a049;
+/* Info ja teated */
+.course-add-role-info {
+  margin-bottom: 25px;
+  font-size: 0.9rem;
+  color: #666;
 }
 
-.submit-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.cancel-btn {
-  flex: 1;
-  background-color: #f44336;
-  padding: 12px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.cancel-btn:hover:not(:disabled) {
-  background-color: #da190b;
-}
-
-.cancel-btn:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
-}
-
-.success-message {
+.course-add-success {
   background-color: #d4edda;
   color: #155724;
-  padding: 12px;
+  padding: 15px;
   border-radius: 4px;
-  margin-bottom: 1rem;
+  margin-bottom: 20px;
   border: 1px solid #c3e6cb;
 }
 
-.error-message {
+.course-add-error {
   background-color: #f8d7da;
   color: #721c24;
-  padding: 12px;
+  padding: 15px;
   border-radius: 4px;
-  margin-bottom: 1rem;
+  margin-bottom: 20px;
   border: 1px solid #f5c6cb;
 }
 
-.role-info {
-  margin-bottom: 1rem;
-  padding: 10px;
-  background-color: #e7f3ff;
+/* Vormi stiilid */
+.course-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.course-add-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.course-add-label {
+  font-weight: bold;
+  color: #b55a30; /* Punakas-pruun toon */
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.course-add-input,
+.course-add-textarea {
+  padding: 12px;
+  border: 1px solid #eee;
   border-radius: 4px;
+  background-color: #fdfcf9;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.course-add-input:focus,
+.course-add-textarea:focus {
+  border-color: #d4a76a;
+}
+
+.course-add-row {
+  display: flex;
+  gap: 20px;
+}
+
+/* Nupud */
+.course-add-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.course-add-submit-btn {
+  flex: 2;
+  background-color: #d4a76a;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.course-add-submit-btn:hover:not(:disabled) {
+  background-color: #b88f55;
+}
+
+.course-add-submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.course-add-cancel-btn {
+  flex: 1;
+  background-color: transparent;
+  color: #999;
+  border: 1px solid #ddd;
+  padding: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.course-add-cancel-btn:hover {
+  background-color: #eee;
+}
+
+/* Mobiilivaade */
+@media (max-width: 600px) {
+  .course-add-paper-block { padding: 30px 20px; }
+  .course-add-row { flex-direction: column; }
+  .course-add-actions { flex-direction: column; }
+  .course-add-page-title { font-size: 1.6rem; }
 }
 </style>

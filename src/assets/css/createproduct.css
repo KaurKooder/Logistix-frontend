@@ -1,55 +1,124 @@
-.create-product-page {
-  max-width: 500px;
-  margin: 60px auto;
-  padding: 32px;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+/* Taust ja konteiner */
+.product-add-view-outer-container {
+  background-color: #F5E9D0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
   font-family: Arial, sans-serif;
 }
 
-.create-product-page h1 {
-  text-align: center;
-  margin-bottom: 24px;
+.product-add-view-paper-block {
+  background-color: #ffffff;
+  max-width: 700px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
 }
 
-/* Inputid ja textarea */
-.create-product-page input,
-.create-product-page textarea {
+/* Päis ja joon */
+.product-add-view-header-section {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 10px;
+}
+
+.product-add-view-page-title {
+  font-weight: 300;
+  font-size: 2.2rem;
+  color: #d4a76a;
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Vormi elemendid */
+.product-add-view-field {
+  margin-bottom: 25px;
+}
+
+.product-add-view-label {
+  display: block;
+  font-weight: bold;
+  color: #b55a30; /* Punakas-pruun toon siltidele */
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.product-add-view-input,
+.product-add-view-textarea {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 12px 15px;
+  font-size: 1rem;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: #fdfcf9;
+  outline: none;
+  transition: border-color 0.2s;
   box-sizing: border-box;
 }
 
-.create-product-page textarea {
-  min-height: 100px;
+.product-add-view-input:focus,
+.product-add-view-textarea:focus {
+  border-color: #d4a76a;
+}
+
+.product-add-view-textarea {
+  min-height: 120px;
   resize: vertical;
 }
 
-/* Focus efekt */
-.create-product-page input:focus,
-.create-product-page textarea:focus {
-  outline: none;
-  border-color: #3498db;
+/* Nupud */
+.product-add-view-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 30px;
 }
 
-/* Nupp */
-.create-product-page button {
-  width: 100%;
-  padding: 12px;
-  background-color: #2ecc71;
+.product-add-view-submit-btn {
+  background-color: #d4a76a;
   color: white;
-  font-size: 15px;
   border: none;
-  border-radius: 6px;
+  padding: 12px 25px;
+  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
-  margin-top: 8px;
+  transition: background 0.2s;
 }
 
-.create-product-page button:hover {
-  background-color: #27ae60;
+.product-add-view-submit-btn:hover {
+  background-color: #b88f55;
+}
+
+.product-add-view-cancel-btn {
+  background-color: transparent;
+  color: #999;
+  border: 1px solid #ddd;
+  padding: 12px 25px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.product-add-view-cancel-btn:hover {
+  background-color: #eee;
+  color: #666;
+}
+
+/* Mobiilivaade */
+@media (max-width: 600px) {
+  .product-add-view-paper-block {
+    padding: 30px 20px;
+  }
+  .product-add-view-actions {
+    flex-direction: column-reverse;
+  }
+  .product-add-view-submit-btn,
+  .product-add-view-cancel-btn {
+    width: 100%;
+  }
 }

@@ -89,62 +89,53 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="shop-page">
+  <div class="shop-view-outer-container">
+    <div class="shop-view-paper-block">
 
-    <div v-if="isAdmin" class="button-align">
-      <router-link to="/products/create">
-        <button class="create-product-btn">Lisa uus toode</button>
-      </router-link>
-    </div>
+      <header class="shop-view-header-section">
+        <h1 class="shop-view-page-title">E-POOD</h1>
+        <div v-if="isAdmin" class="shop-view-admin-actions">
+          <router-link to="/products/create">
+            <button class="shop-view-create-btn">Lisa uus toode</button>
+          </router-link>
+        </div>
+      </header>
 
-    <div class="shop-header">
-      <h1>E-pood</h1>
+      <div class="shop-view-body">
+        <div class="shop-view-grid">
+          <div v-for="product in products" :key="product.id" class="shop-view-card">
 
-      <div class="fetch-product">
-        <div class="fetch-alignment">
-          <input
-            class="fetch-input"
-            type="number"
-            v-model.number="productIdToFetch"
-            placeholder="Sisesta toote ID"
-          />
-          <button class="fetch-product-btn" @click="fetchProductById">
-            Kuva toode ID järgi
-          </button>
+            <div class="shop-view-card-header">
+              <h3 class="shop-view-card-title">{{ product.name }}</h3>
+              <span class="shop-view-price-tag">{{ product.price }} €</span>
+            </div>
+
+            <div class="shop-view-card-content">
+              <p class="shop-view-description">{{ product.description }}</p>
+              <p class="shop-view-category"><i>Kategooria:</i> {{ product.category }}</p>
+            </div>
+
+            <div class="shop-view-card-actions">
+              <button class="shop-view-add-to-cart-btn" @click="addToCart(product.id)">
+                Lisa ostukorvi
+              </button>
+
+              <button
+                v-if="isAdmin"
+                class="shop-view-delete-btn"
+                @click="deleteProduct(product.id)"
+              >
+                Kustuta
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div v-if="selectedProduct" class="single-product">
-          <h3>{{ selectedProduct.name }}</h3>
-          <p>{{ selectedProduct.description }}</p>
-          <p><i>Kategooria:</i> {{ selectedProduct.category }}</p>
-          <p><i>Hind:</i> €{{ selectedProduct.price }}</p>
-          <button class="add-to-cart-btn" @click="addToCart(selectedProduct.id)">Lisa ostukorvi</button>
-        </div>
-
-        <div v-else-if="productIdToFetch && !selectedProduct">
-          <p>Toodet ei leitud.</p>
+        <div v-if="products.length === 0" class="shop-view-empty">
+          <p>Hetkel tooteid pole.</p>
         </div>
       </div>
+
     </div>
-
-    <div class="shop-grid">
-      <div v-for="product in products" :key="product.id" class="shop-card">
-        <div class="product-header">
-          <h3>{{ product.name }}</h3>
-
-          <button
-            v-if="isAdmin"
-            class="delete-product-btn"
-            @click="deleteProduct(product.id)"
-          >
-            Kustuta
-          </button>
-        </div>
-        <p>{{ product.description }}</p>
-        <p><i>Hind:</i> €{{ product.price }}</p>
-        <button class="add-to-cart-btn" @click="addToCart(product.id)">Lisa ostukorvi</button>
-      </div>
-    </div>
-
   </div>
 </template>

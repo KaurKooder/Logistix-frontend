@@ -1,47 +1,100 @@
-.blog-post-detail {
-  padding: 2rem;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #222;
+/* Taust ja üldine raamistik */
+.post-view-outer-container {
+  background-color: #F5E9D0; /* Tume beežikas taust */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
 }
 
-.post-detail-card {
-  border: 1px solid #ccc;
-  padding: 1.5rem;
-  border-radius: 8px;
-  max-width: 600px;
-  margin: auto;
+.post-view-paper-block {
+  background-color: #ffffff;
+  max-width: 900px; /* Veidi kitsam kui loendi vaade, et teksti oleks mugavam lugeda */
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
+  line-height: 1.6;
 }
 
-.post-detail-card h1 {
-  color: #c5973c;
-  text-align: center;
+/* Navigatsioon ja nupud */
+.post-view-navigation {
+  margin-bottom: 30px;
 }
 
-.delete-btn {
-  margin-top: 1rem;
-  background-color: #dc3545;
+.post-view-back-btn {
+  background-color: #d4a76a;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 5px;
+  padding: 8px 16px;
+  border-radius: 4px;
   cursor: pointer;
-  justify-content: right;
+  font-weight: bold;
+  transition: opacity 0.2s;
 }
 
-.delete-btn:hover {
-  background-color: #c82333;
+.post-view-back-btn:hover {
+  opacity: 0.9;
 }
 
-.goback {
-  background-color: #c5973c;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-size: 1rem;
+/* Päis ja joon */
+.post-view-header-section {
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 35px;
+  padding-bottom: 10px;
+}
+
+.post-view-page-title {
+  font-weight: 300;
+  font-size: 2rem;
+  color: #d4a76a;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Sisu tekst */
+.post-view-content-body {
+  margin-bottom: 50px;
+}
+
+.post-view-text {
+  font-size: 1.1rem;
+  white-space: pre-wrap; /* Säilitab reavahetused */
+  color: #444;
+}
+
+/* Jalus ja kustutamine */
+.post-view-footer {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.post-view-delete-btn {
+  background-color: transparent;
+  color: #b55a30; /* Punakas-pruun toon */
+  border: 1px solid #b55a30;
+  padding: 8px 15px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.goback:hover {
-  background-color: #8f6b20;
+.post-view-delete-btn:hover {
+  background-color: #b55a30;
+  color: white;
+}
+
+/* Mobiili kohandused */
+@media (max-width: 600px) {
+  .post-view-paper-block {
+    padding: 30px 20px;
+  }
+  .post-view-page-title {
+    font-size: 1.5rem;
+  }
 }

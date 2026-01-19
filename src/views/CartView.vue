@@ -29,34 +29,60 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="cart-page">
-    <h1>Ostukorv</h1>
+  <div class="cart-view-outer-container">
+    <div class="cart-view-paper-block">
 
-    <div v-if="!cartStore.cart || cartStore.cart.items.length === 0">
-      <p>Ostukorv on tühi.</p>
-    </div>
+      <header class="cart-view-header-section">
+        <h1 class="cart-view-page-title">OSTUKORV</h1>
+      </header>
 
-    <div v-else class="cart-grid">
-      <div v-for="item in cartStore.cart.items" :key="item.productId" class="cart-item-card">
-        <h3>{{ item.productName }}</h3>
-        <p><i>Hind:</i> €{{ item.price }}</p>
-        <p>
-          <i>Kogus:</i>
-          <input
-            type="number"
-            v-model.number="item.quantity"
-            @change="updateQuantity(item.productId, item.quantity)"
-            min="1"
-          />
-        </p>
-        <p><i>Kokku:</i> €{{ item.totalPrice.toFixed(2) }}</p>
-        <button class="remove-btn" @click="removeItem(item.productId)">Eemalda</button>
+      <div class="cart-view-body">
+        <div v-if="!cartStore.cart || cartStore.cart.items.length === 0" class="cart-view-empty">
+          <p>Sinu ostukorv on tühi.</p>
+          <router-link to="/products" class="cart-view-back-link">Tagasi poodi</router-link>
+        </div>
+
+        <div v-else class="cart-view-content">
+          <div class="cart-view-items-list">
+            <div v-for="item in cartStore.cart.items" :key="item.productId" class="cart-view-item-row">
+              <div class="cart-view-item-info">
+                <h3 class="cart-view-item-name">{{ item.productName }}</h3>
+                <span class="cart-view-item-price">Ühikuhind: €{{ item.price }}</span>
+              </div>
+
+              <div class="cart-view-item-controls">
+                <div class="cart-view-quantity-wrapper">
+                  <label>Kogus:</label>
+                  <input
+                      type="number"
+                      v-model.number="item.quantity"
+                      @change="updateQuantity(item.productId, item.quantity)"
+                      min="1"
+                      class="cart-view-quantity-input"
+                  />
+                </div>
+
+                <div class="cart-view-row-total">
+                  <strong>Summa: €{{ item.totalPrice.toFixed(2) }}</strong>
+                </div>
+
+                <button class="cart-view-remove-btn" @click="removeItem(item.productId)">
+                  Eemalda
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="cart-view-summary-section">
+            <div class="cart-view-total-box">
+              <span class="cart-view-total-label">Kogusumma:</span>
+              <span class="cart-view-total-amount">€{{ cartStore.cart.totalPrice.toFixed(2) }}</span>
+            </div>
+            <button class="cart-view-checkout-btn" @click="checkout">Maksma</button>
+          </div>
+        </div>
       </div>
 
-      <div class="cart-summary">
-        <h3>Koguhind: €{{ cartStore.cart.totalPrice.toFixed(2) }}</h3>
-        <button class="checkout-btn" @click="checkout">Maksma</button>
-      </div>
     </div>
   </div>
 </template>

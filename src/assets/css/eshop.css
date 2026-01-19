@@ -1,146 +1,163 @@
-/* Üldine lehe paigutus */
-.shop-page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 20px;
+/* Taust ja üldine raamistik */
+.shop-view-outer-container {
+  background-color: #F5E9D0; /* Tume beež taust */
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
   font-family: Arial, sans-serif;
 }
 
-/* Ülemine nupp */
-.button-align {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 16px;
+.shop-view-paper-block {
+  background-color: #ffffff;
+  max-width: 1200px;
+  width: 100%;
+  padding: 60px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  color: #4a4a4a;
 }
 
-.create-product-btn {
-  background-color: #2ecc71;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.create-product-btn:hover {
-  background-color: #27ae60;
-}
-
-/* Pealkiri + otsing */
-.shop-header h1 {
-  margin-bottom: 20px;
-}
-
-/* Otsingu ala */
-.fetch-product {
-  margin-bottom: 32px;
-}
-
-.fetch-alignment {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.fetch-input {
-  padding: 10px;
-  width: 220px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-.fetch-product-btn {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.fetch-product-btn:hover {
-  background-color: #2980b9;
-}
-
-/* Ühe toote vaade (otsingu tulemus) */
-.single-product {
-  background: #f9f9f9;
-  border-left: 4px solid #3498db;
-  padding: 16px;
-  border-radius: 6px;
-}
-
-/* Toodete grid */
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-/* Toote kaart */
-.shop-card {
-  background: #fff;
-  padding: 18px;
-  border-radius: 8px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.shop-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-}
-
-.shop-card h3 {
-  margin-bottom: 8px;
-}
-
-.shop-card p {
-  margin: 6px 0;
-  color: #555;
-}
-
-.product-header {
+/* Päis ja joon */
+.shop-view-header-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 40px;
+  padding-bottom: 10px;
 }
 
-.delete-product-btn {
-  background-color: #e74c3c; /* punane kustutamiseks */
+.shop-view-page-title {
+  font-weight: 300;
+  font-size: 2.2rem;
+  color: #d4a76a; /* Kuldne toon */
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.shop-view-create-btn {
+  background-color: #d4a76a;
   color: white;
   border: none;
-  padding: 6px 12px;
-  border-radius: 5px;
+  padding: 10px 20px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
-  transition: background-color 0.2s ease;
+  font-weight: bold;
 }
 
-.delete-product-btn:hover {
-  background-color: #c0392b;
+/* Toodete Grid */
+.shop-view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 30px;
 }
 
-.add-to-cart-btn {
-  background-color: #1abc9c; /* türkiissinine / roheline */
+.shop-view-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, border-color 0.2s;
+  background: #fff;
+}
+
+.shop-view-card:hover {
+  transform: translateY(-5px);
+  border-color: #d4a76a;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+.shop-view-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.shop-view-card-title {
+  color: #d4a76a;
+  margin: 0;
+  font-size: 1.25rem;
+  flex: 1;
+}
+
+.shop-view-price-tag {
+  font-weight: bold;
+  color: #b55a30; /* Punakas-pruun toon */
+  font-size: 1.1rem;
+}
+
+.shop-view-card-content {
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.shop-view-description {
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.shop-view-category {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+/* Nupud kaartidel */
+.shop-view-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shop-view-add-to-cart-btn {
+  background-color: #d4a76a;
   color: white;
   border: none;
-  padding: 10px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
-  margin-top: 12px;
-  width: 100%;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: background 0.2s;
 }
 
-.add-to-cart-btn:hover {
-  background-color: #16a085;
-  transform: translateY(-1px);
+.shop-view-add-to-cart-btn:hover {
+  background-color: #b88f55;
 }
 
-.add-to-cart-btn:active {
-  transform: translateY(0);
+.shop-view-delete-btn {
+  background-color: transparent;
+  color: #b55a30;
+  border: 1px solid #b55a30;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.shop-view-delete-btn:hover {
+  background-color: #b55a30;
+  color: white;
+}
+
+.shop-view-empty {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+/* Mobiilivaade */
+@media (max-width: 600px) {
+  .shop-view-paper-block {
+    padding: 30px 20px;
+  }
+  .shop-view-header-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
 }
