@@ -1,7 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useCartStore } from '@/stores/cart'
-import apiClient from '@/services/api'
 import "@/assets/css/cartcss.css";
 import router from "@/router/index.js";
 
@@ -33,7 +32,7 @@ onMounted(() => {
   <div class="cart-page">
     <h1>Ostukorv</h1>
 
-    <div v-if="cartStore.cart.items.length === 0">
+    <div v-if="!cartStore.cart || cartStore.cart.items.length === 0">
       <p>Ostukorv on tühi.</p>
     </div>
 
