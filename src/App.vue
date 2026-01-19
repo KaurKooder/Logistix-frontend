@@ -12,17 +12,16 @@ onMounted(() => {
 
 <template>
   <header class="navbar">
-    <div class="nav-left">
+    <RouterLink to="/" class="logo-link">
       <img src="@/assets/logo/vkkeskuslogo.png" alt="Logo" class="logo" />
-    </div>
+    </RouterLink>
 
       <nav class="nav-menu">
         <RouterLink to="/">Avaleht</RouterLink>
         <RouterLink to="/about">Meist</RouterLink>
-        <RouterLink to="/users">Konto</RouterLink>
         <RouterLink to="/posts">Blogi ja artiklid</RouterLink>
-        <RouterLink to="/products">E-pood</RouterLink>
         <RouterLink to="/courses">Koolitused</RouterLink>
+        <RouterLink to="/products">E-pood</RouterLink>
 
         <RouterLink to="/cart" class="cart-link">
           🛒
@@ -34,6 +33,7 @@ onMounted(() => {
           </span>
         </RouterLink>
         <RouterLink to="/orders">Minu tellimused</RouterLink>
+        <RouterLink to="/users">Konto</RouterLink>
       </nav>
   </header>
   <RouterView />
@@ -49,6 +49,7 @@ onMounted(() => {
   padding: 20px 40px;
   background: #faf8f4;
   border-bottom: 1px solid #eee;
+  font-family: Arial, sans-serif;
 }
 
 .logo {
