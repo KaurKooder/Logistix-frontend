@@ -17,25 +17,21 @@ export const useCartStore = defineStore('cart', {
       }
     },
 
-    // Lisab toote ostukorvi
     async addToCart(productId, quantity) {
       const res = await apiClient.post(`/cart/items`, { productId, quantity })
       this.cart = res.data
     },
 
-    // Muudab toote kogust ostukorvis
     async updateQuantity(productId, quantity) {
       const res = await apiClient.put(`/cart/items/${productId}`, null, { params: { quantity } })
       this.cart = res.data
     },
 
-    // Eemaldab toote ostukorvist
     async removeItem(productId) {
       const res = await apiClient.delete(`/cart/items/${productId}`)
       this.cart = res.data
     },
 
-    // Checkout
     async checkout() {
       await apiClient.post(`/cart/checkout`)
       await this.fetchCart()
