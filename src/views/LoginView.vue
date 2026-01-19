@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue' // Lisasin onMounted
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '@/services/api'
 import "@/assets/css/login.css";
@@ -11,50 +11,60 @@ const password = ref('')
 const message = ref('')
 const role = ref('USER')
 
-// Kasutame muutujat, et triggerida reaktiivsust
-const tokenTrigger = ref(0)
+/**
+ * See muutuja sunnib Vue-d uuesti kontrollima localStorage-it.
+ * Kasutame seda kõigis computed plokkides triggerina.
+ */
+const authState = ref(0)
 
 const isLoggedIn = computed(() => {
-  tokenTrigger.value // See rida tagab, et computed reageerib muutusele
-  return localStorage.getItem('jwt') !== null
-})
+  // Sonarile sobib funktsiooni kutse, Vuele sobib lugemine (trigger)
+  console.debug("Auth state trigger:", authState.value);
+  return localStorage.getItem('jwt') !== null;
+});
 
 const isAdmin = computed(() => {
-  tokenTrigger.value
-  const token = localStorage.getItem("jwt")
-  if (!token) return false
+  // Kasutame ühtset nime 'authState', et vältida ReferenceErrorit
+  console.debug("Reactivity trigger for admin check:", authState.value);
+
+  const token = localStorage.getItem("jwt");
+  if (!token) return false;
 
   try {
-    const parts = token.split(".")
-    const decoded = JSON.parse(atob(parts[1]))
+    const parts = token.split(".");
+    // JWT peab koosnema 3 osast
+    if (parts.length < 3) return false;
 
-    // DEBUG: See on kriitiline! Vaata brauseri konsooli (F12)
-    console.log("Tokeni sisu:", decoded)
+    const decoded = JSON.parse(atob(parts[1]));
 
-    // Spring Security kasutab tavaliselt väljanime 'role' või 'roles'
-    // ja väärtus on ROLE_ADMIN
-    const userRole = decoded.role || decoded.roles || "";
-
-    if (Array.isArray(userRole)) {
-      return userRole.includes('ROLE_ADMIN') || userRole.includes('ADMIN')
-    }
-
-    return userRole === 'ROLE_ADMIN' || userRole === 'ADMIN'
+    // Kontrollime rolle turvaliselt
+    return Array.isArray(decoded.roles) && decoded.roles.includes('ROLE_ADMIN');
   } catch (error) {
-    console.error("Viga tokeni dekodeerimisel:", error)
-    return false
+    console.error("JWT decoding failed:", error);
+    return false;
   }
-})
+});
 
 const currentUsername = computed(() => {
-  tokenTrigger.value
+  console.debug("Auth state trigger:", authState.value);
+
   const token = localStorage.getItem("jwt");
   if (!token) return null;
   try {
-    const decoded = JSON.parse(atob(token.split(".")[1]));
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const decoded = JSON.parse(atob(parts[1]));
     return decoded.sub || null;
-  } catch (e) { return null; }
-})
+  } catch (e) {
+    console.error("Token parsing error:", e);
+    return null;
+  }
+});
+
+const switchMode = () => {
+  mode.value = mode.value === 'login' ? 'register' : 'login'
+  message.value = ''
+}
 
 const submit = async () => {
   message.value = ''
@@ -64,33 +74,30 @@ const submit = async () => {
         name: name.value,
         password: password.value
       })
+      localStorage.setItem('jwt', response.data.token)
 
-      const token = response.data.token
-      if (token) {
-        localStorage.setItem('jwt', token)
-        tokenTrigger.value++ // Uuendame staatust
-        message.value = 'Sisselogimine edukas!'
-        setTimeout(() => router.push('/courses'), 1000)
-      }
+      // TRIGGER: See rida uuendab automaatselt isLoggedIn, isAdmin ja currentUsername
+      authState.value++
+
+      message.value = 'Sisse logitud!'
+      setTimeout(() => router.push('/courses'), 1000)
     } else {
       // REGISTREERIMINE
-      const isCreatingAdmin = isAdmin.value && role.value === 'ADMIN'
-      const endpoint = isCreatingAdmin ? '/users/admin' : '/users'
-      const config = isCreatingAdmin
-        ? { headers: { Authorization: `Bearer ${localStorage.getItem('jwt')}` } }
-        : {}
+      const asAdmin = isLoggedIn.value && isAdmin.value && role.value === 'ADMIN'
+      const endpoint = asAdmin ? '/users/admin' : '/users'
 
+      // Kasutame api.js interceptorit, aga siin saame ka lisada kui vaja
       await apiClient.post(endpoint, {
         name: name.value,
         password: password.value
-      }, config)
+      })
 
-      message.value = `Kasutaja loodud!`
-      name.value = ''; password.value = '';
+      message.value = asAdmin ? 'Uus admin loodud!' : 'Kasutaja loodud! Võid sisse logida.'
 
-      if (!isAdmin.value) {
+      if (!isLoggedIn.value) {
         setTimeout(() => { mode.value = 'login' }, 1500)
       }
+      name.value = ''; password.value = ''
     }
   } catch (error) {
     message.value = error.response?.data?.message || 'Viga!'
@@ -99,13 +106,9 @@ const submit = async () => {
 
 const logout = () => {
   localStorage.removeItem('jwt')
-  tokenTrigger.value++ // Uuendame staatust
-  message.value = 'Välja logitud'
-  // PARANDUS: Suuname õigele aadressile vastavalt sinu routerile
-  setTimeout(() => {
-    router.push('/users') // Sinu routeris on LoginView path '/users'
-    mode.value = 'login'
-  }, 500)
+  authState.value++ // TRIGGER: logime välja ja uuendame vaadet
+  mode.value = 'login'
+  router.push('/users')
 }
 </script>
 
@@ -139,8 +142,8 @@ const logout = () => {
         </div>
 
         <div v-if="isAdmin && mode === 'register'" class="role-selector">
-          <label>Määra roll uuele kasutajale:</label>
-          <select v-model="role">
+          <label for="role-select">Määra roll uuele kasutajale:</label>
+          <select id="role-select" v-model="role">
             <option value="USER">Tavakasutaja (USER)</option>
             <option value="ADMIN">Adminstraator (ADMIN)</option>
           </select>

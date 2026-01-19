@@ -58,8 +58,20 @@ const userId = computed(() => user.value?.userId);
 // Load courses with filter + pagination
 async function loadCoursesFiltered() {
   try {
-    const params = { ...filter.value };
+    // Teeme kopia filtrist, aga eemaldame sealt sortBy ja sortDir
+    // ning asendame need Springile sobiva 'sort' parameetriga
+    const { sortBy, sortDir, ...restOfFilters } = filter.value;
+
+    const params = {
+      ...restOfFilters,
+      // Spring Pageable ootab parameetrit 'sort' kujul "väljaNimi,suund"
+      sort: `${sortBy},${sortDir}`
+    };
+
     if (isLoggedIn.value) params.userId = userId.value;
+
+    console.log("Päringu parameetrid Springile:", params);
+
     const res = await apiClient.get('/courses/search', { params });
     courses.value = res.data.content;
     totalPages.value = res.data.totalPages;
@@ -101,6 +113,8 @@ function prevPage() {
 function goToAddCourse() {
   router.push('/courses/add');
 }
+
+
 
 // Initial load
 onMounted(loadCoursesFiltered);
