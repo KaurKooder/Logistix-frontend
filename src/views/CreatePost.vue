@@ -32,8 +32,9 @@ const addPost = async () => {
 
       <div class="create-view-form">
         <div class="create-view-field">
-          <label class="create-view-label">Pealkiri</label>
+          <label for="post-title" class="create-view-label">Pealkiri</label>
           <input
+            id="post-title"
             v-model="newPostTitle"
             class="create-view-input"
             placeholder="Sisesta postituse pealkiri..."
@@ -41,11 +42,13 @@ const addPost = async () => {
         </div>
 
         <div class="create-view-field">
-          <label class="create-view-label">Sisu</label>
+          <label for="post-content" class="create-view-label">Sisu</label>
           <textarea
+            id="post-content"
             v-model="newPostContent"
             class="create-view-textarea"
             placeholder="Kirjuta siia postituse sisu..."
+            rows="10"
           ></textarea>
         </div>
 

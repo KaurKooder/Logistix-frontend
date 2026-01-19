@@ -1,6 +1,5 @@
-/* Taust ja üldine raamistik */
 .shop-view-outer-container {
-  background-color: #F5E9D0; /* Tume beež taust */
+  background-color: #F5E9D0;
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -18,7 +17,6 @@
   color: #4a4a4a;
 }
 
-/* Päis ja joon */
 .shop-view-header-section {
   display: flex;
   justify-content: space-between;
@@ -31,7 +29,7 @@
 .shop-view-page-title {
   font-weight: 300;
   font-size: 2.2rem;
-  color: #d4a76a; /* Kuldne toon */
+  color: #d4a76a;
   margin: 0;
   letter-spacing: 2px;
   text-transform: uppercase;
@@ -39,7 +37,7 @@
 
 .shop-view-create-btn {
   background-color: #d4a76a;
-  color: white;
+  color: #1a1a1a;
   border: none;
   padding: 10px 20px;
   border-radius: 4px;
@@ -47,7 +45,6 @@
   font-weight: bold;
 }
 
-/* Toodete Grid */
 .shop-view-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -86,7 +83,7 @@
 
 .shop-view-price-tag {
   font-weight: bold;
-  color: #b55a30; /* Punakas-pruun toon */
+  color: #b55a30;
   font-size: 1.1rem;
 }
 
@@ -107,7 +104,6 @@
   color: #999;
 }
 
-/* Nupud kaartidel */
 .shop-view-card-actions {
   display: flex;
   flex-direction: column;
@@ -116,7 +112,7 @@
 
 .shop-view-add-to-cart-btn {
   background-color: #d4a76a;
-  color: white;
+  color: #1a1a1a;
   border: none;
   padding: 12px;
   border-radius: 4px;
@@ -150,7 +146,6 @@
   color: #999;
 }
 
-/* Mobiilivaade */
 @media (max-width: 600px) {
   .shop-view-paper-block {
     padding: 30px 20px;

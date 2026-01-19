@@ -1,6 +1,5 @@
-/* Taust ja üldine raamistik */
 .post-view-outer-container {
-  background-color: #F5E9D0; /* Tume beežikas taust */
+  background-color: #F5E9D0;
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -11,7 +10,7 @@
 
 .post-view-paper-block {
   background-color: #ffffff;
-  max-width: 900px; /* Veidi kitsam kui loendi vaade, et teksti oleks mugavam lugeda */
+  max-width: 900px;
   width: 100%;
   padding: 60px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
@@ -19,14 +18,13 @@
   line-height: 1.6;
 }
 
-/* Navigatsioon ja nupud */
 .post-view-navigation {
   margin-bottom: 30px;
 }
 
 .post-view-back-btn {
   background-color: #d4a76a;
-  color: white;
+  color: #1a1a1a;
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
@@ -39,7 +37,6 @@
   opacity: 0.9;
 }
 
-/* Päis ja joon */
 .post-view-header-section {
   border-bottom: 1px solid #e0e0e0;
   margin-bottom: 35px;
@@ -55,18 +52,16 @@
   letter-spacing: 1px;
 }
 
-/* Sisu tekst */
 .post-view-content-body {
   margin-bottom: 50px;
 }
 
 .post-view-text {
   font-size: 1.1rem;
-  white-space: pre-wrap; /* Säilitab reavahetused */
+  white-space: pre-wrap;
   color: #444;
 }
 
-/* Jalus ja kustutamine */
 .post-view-footer {
   border-top: 1px solid #f0f0f0;
   padding-top: 20px;
@@ -76,7 +71,7 @@
 
 .post-view-delete-btn {
   background-color: transparent;
-  color: #b55a30; /* Punakas-pruun toon */
+  color: #b55a30;
   border: 1px solid #b55a30;
   padding: 8px 15px;
   border-radius: 4px;
@@ -89,7 +84,6 @@
   color: white;
 }
 
-/* Mobiili kohandused */
 @media (max-width: 600px) {
   .post-view-paper-block {
     padding: 30px 20px;

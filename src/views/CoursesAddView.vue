@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '@/services/api';
-import "@/assets/css/courses.css";
+import "@/assets/css/coursesaddcss.css";
 
 const router = useRouter();
 
@@ -122,8 +122,9 @@ function goBack() {
 
         <div class="course-add-form">
           <div class="course-add-field">
-            <label class="course-add-label">Koolituse nimi *</label>
+            <label for="course-name" class="course-add-label">Koolituse nimi *</label>
             <input
+              id="course-name"
               v-model="newCourse.name"
               placeholder="Sisesta koolituse nimi"
               :disabled="isLoading"
@@ -132,8 +133,9 @@ function goBack() {
           </div>
 
           <div class="course-add-field">
-            <label class="course-add-label">Kategooria *</label>
+            <label for="course-category" class="course-add-label">Kategooria *</label>
             <input
+              id="course-category"
               v-model="newCourse.category"
               placeholder="Kategooria (nt. Nõustamine)"
               :disabled="isLoading"
@@ -142,8 +144,9 @@ function goBack() {
           </div>
 
           <div class="course-add-field">
-            <label class="course-add-label">Kirjeldus *</label>
+            <label for="course-description" class="course-add-label">Kirjeldus *</label>
             <textarea
+              id="course-description"
               v-model="newCourse.description"
               placeholder="Koolituse põhjalik kirjeldus..."
               rows="6"
@@ -154,8 +157,9 @@ function goBack() {
 
           <div class="course-add-row">
             <div class="course-add-field">
-              <label class="course-add-label">Hind (€) *</label>
+              <label for="course-price" class="course-add-label">Hind (€) *</label>
               <input
+                id="course-price"
                 v-model.number="newCourse.price"
                 type="number"
                 step="0.01"
@@ -166,8 +170,9 @@ function goBack() {
             </div>
 
             <div class="course-add-field">
-              <label class="course-add-label">Toimumisaeg *</label>
+              <label for="course-date" class="course-add-label">Toimumisaeg *</label>
               <input
+                id="course-date"
                 v-model="newCourse.date"
                 type="date"
                 :disabled="isLoading"
@@ -198,172 +203,3 @@ function goBack() {
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Taust ja konteiner */
-.course-add-outer-container {
-  background-color: #F5E9D0;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 40px 20px;
-  font-family: Arial, sans-serif;
-}
-
-.course-add-paper-block {
-  background-color: #ffffff;
-  max-width: 850px;
-  width: 100%;
-  padding: 60px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  color: #4a4a4a;
-}
-
-/* Päis ja joon */
-.course-add-header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 30px;
-  padding-bottom: 10px;
-}
-
-.course-add-page-title {
-  font-weight: 300;
-  font-size: 2.2rem;
-  color: #d4a76a;
-  margin: 0;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-.course-add-back-btn {
-  background-color: #d4a76a;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-/* Info ja teated */
-.course-add-role-info {
-  margin-bottom: 25px;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.course-add-success {
-  background-color: #d4edda;
-  color: #155724;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border: 1px solid #c3e6cb;
-}
-
-.course-add-error {
-  background-color: #f8d7da;
-  color: #721c24;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-  border: 1px solid #f5c6cb;
-}
-
-/* Vormi stiilid */
-.course-add-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.course-add-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-}
-
-.course-add-label {
-  font-weight: bold;
-  color: #b55a30; /* Punakas-pruun toon */
-  font-size: 0.9rem;
-  text-transform: uppercase;
-}
-
-.course-add-input,
-.course-add-textarea {
-  padding: 12px;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  background-color: #fdfcf9;
-  font-size: 1rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.course-add-input:focus,
-.course-add-textarea:focus {
-  border-color: #d4a76a;
-}
-
-.course-add-row {
-  display: flex;
-  gap: 20px;
-}
-
-/* Nupud */
-.course-add-actions {
-  display: flex;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-.course-add-submit-btn {
-  flex: 2;
-  background-color: #d4a76a;
-  color: white;
-  border: none;
-  padding: 14px;
-  border-radius: 4px;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.course-add-submit-btn:hover:not(:disabled) {
-  background-color: #b88f55;
-}
-
-.course-add-submit-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.course-add-cancel-btn {
-  flex: 1;
-  background-color: transparent;
-  color: #999;
-  border: 1px solid #ddd;
-  padding: 14px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.course-add-cancel-btn:hover {
-  background-color: #eee;
-}
-
-/* Mobiilivaade */
-@media (max-width: 600px) {
-  .course-add-paper-block { padding: 30px 20px; }
-  .course-add-row { flex-direction: column; }
-  .course-add-actions { flex-direction: column; }
-  .course-add-page-title { font-size: 1.6rem; }
-}
-</style>
