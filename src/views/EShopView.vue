@@ -7,15 +7,12 @@ import { useCartStore } from '@/stores/cart';
 const cartStore = useCartStore()
 
 const products = ref([]);
-const productIdToFetch = ref('');
 const selectedProduct = ref(null);
 
 // Reaktiivsuse päästik (trigger), et Vue teaks localStorage muutusest
 const authState = ref(0)
 
-// SonarQube-sõbralik admini kontroll
 const isAdmin = computed(() => {
-  // console.debug täidab Sonari nõude (funktsiooni kutse) ja Vue nõude (lugemine)
   console.debug("Checking admin status for Eshop, state:", authState.value);
 
   const token = localStorage.getItem("jwt");
@@ -41,17 +38,6 @@ const fetchProducts = async () => {
     products.value = response.data;
   } catch (error) {
     console.error('Error fetching products:', error);
-  }
-}
-
-const fetchProductById = async () => {
-  if (!productIdToFetch.value) return;
-  try {
-    const response = await apiClient.get(`/products/${productIdToFetch.value}`)
-    selectedProduct.value = response.data;
-  } catch (error) {
-    selectedProduct.value = null;
-    console.error('Product not found:', error);
   }
 }
 

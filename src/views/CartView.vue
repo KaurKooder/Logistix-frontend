@@ -52,8 +52,11 @@ onMounted(() => {
 
               <div class="cart-view-item-controls">
                 <div class="cart-view-quantity-wrapper">
-                  <label>Kogus:</label>
+                  <label :for="'quantity-' + item.productId" class="cart-view-quantity-label">
+                    Kogus:
+                  </label>
                   <input
+                      :id="'quantity-' + item.productId"
                       type="number"
                       v-model.number="item.quantity"
                       @change="updateQuantity(item.productId, item.quantity)"
@@ -86,7 +89,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-
-</style>

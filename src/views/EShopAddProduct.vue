@@ -13,7 +13,7 @@ const newProductCategory = ref('');
 const addProduct = async () => {
   if (!newProductName.value || !newProductPrice.value) return;
   try {
-    const response = await apiClient.post('/products', {
+    await apiClient.post('/products', {
       category: newProductCategory.value,
       name: newProductName.value,
       description: newProductDescription.value,
@@ -36,8 +36,9 @@ const addProduct = async () => {
 
       <div class="product-add-view-form">
         <div class="product-add-view-field">
-          <label class="product-add-view-label">Toote nimi *</label>
+          <label for="product-name" class="product-add-view-label">Toote nimi *</label>
           <input
+            id="product-name"
             v-model="newProductName"
             class="product-add-view-input"
             placeholder="Sisesta toote nimi..."
@@ -45,8 +46,9 @@ const addProduct = async () => {
         </div>
 
         <div class="product-add-view-field">
-          <label class="product-add-view-label">Kategooria</label>
+          <label for="product-category" class="product-add-view-label">Kategooria</label>
           <input
+            id="product-category"
             v-model="newProductCategory"
             class="product-add-view-input"
             placeholder="Kategooria (nt. Raamatud, Mängud)"
@@ -54,8 +56,9 @@ const addProduct = async () => {
         </div>
 
         <div class="product-add-view-field">
-          <label class="product-add-view-label">Kirjeldus</label>
+          <label for="product-description" class="product-add-view-label">Kirjeldus</label>
           <textarea
+            id="product-description"
             v-model="newProductDescription"
             class="product-add-view-textarea"
             placeholder="Toote lühikirjeldus..."
@@ -63,12 +66,14 @@ const addProduct = async () => {
         </div>
 
         <div class="product-add-view-field">
-          <label class="product-add-view-label">Hind (€) *</label>
+          <label for="product-price" class="product-add-view-label">Hind (€) *</label>
           <input
+            id="product-price"
             type="number"
             v-model="newProductPrice"
             class="product-add-view-input"
             placeholder="0.00"
+            step="0.01"
           />
         </div>
 
