@@ -21,18 +21,25 @@ Kõigepealt kontrollige kas node.js on arvutisse installitud:
 * tehke intellij-s restart
 
 ## Frontend poole käivitamine
-* avage intellij-s terminal ja sisestage commandid: npm install ning npm install axios, npm install pinia
+* avage intellij-s terminal ja sisestage command: npm install
 * kontrollige kas backend poolel application käib
 * sisestage command: npm run dev ja siis peaks tulema localhost link
 * ! kui mingil põhjusel ei tööta, siis võib proovida commandi: npm run build ja seejärel npm run dev
 
 ## Vaadete vahel liikumine
-Lehe üleval on navigatsiooniriba, kust saab lehtede vahel liikuda. Praegu on valmis esialgsed vaated: konto, blogi ja
-artiklid, e-pood, koolitused.
+Lehe üleval on navigatsiooniriba, kust saab lehtede vahel liikuda. Vaated: Avaleht, meist, blogi ja
+artiklid, e-pood, koolitused, ostukorv, minu tellimused, konto.
+
+# Meie lõpptulemus
+Valmis ja töötavad funktsionaalsused:
+* konto loomine/sisselogimine
+* tavakasutaja: saab end registreerida kursustele, osta e-poest tooteid ning teha postitusi
+* adminkasutaja: saab luua kursuseid, lisada e-poele tooteid juurde, saab samuti luua postitusi. (admin kasutaja loomise
+* juhend asub backendi repo readme-s)
 
 # Tööriistad
 * Koodi kirjutamine: intelliJ
 * Raamistik: vue
 * Docker
 * Gitlab
-* Domain: vkkeskusdemo.publicvm.com (hetkel ei näita midagi, parandusel)
+* Domain: http://vkkeskusdemo.hopto.org/
