@@ -16,29 +16,25 @@ onMounted(() => {
       <img src="@/assets/logo/vkkeskuslogo.png" alt="Logo" class="logo" />
     </RouterLink>
 
-      <nav class="nav-menu">
-        <RouterLink to="/">Avaleht</RouterLink>
-        <RouterLink to="/about">Meist</RouterLink>
-        <RouterLink to="/posts">Blogi ja artiklid</RouterLink>
-        <RouterLink to="/courses">Koolitused</RouterLink>
-        <RouterLink to="/products">E-pood</RouterLink>
+    <nav class="nav-menu">
+      <RouterLink to="/">Avaleht</RouterLink>
+      <RouterLink to="/about">Dashboard</RouterLink>
+      <RouterLink to="/courses">Freight</RouterLink>
+      <RouterLink to="/posts">Blogi ja artiklid</RouterLink>
+      <RouterLink to="/products">E-pood</RouterLink>
 
-        <RouterLink to="/cart" class="cart-link">
-          🛒
-          <span
-            v-if="cartStore.cart?.items?.length"
-            class="cart-badge"
-          >
-            {{ cartStore.cart.items.length }}
-          </span>
-        </RouterLink>
-        <RouterLink to="/orders">Minu tellimused</RouterLink>
-        <RouterLink to="/users">Konto</RouterLink>
-      </nav>
+      <RouterLink to="/cart" class="cart-link">
+        🛒
+        <span v-if="cartStore.cart?.items?.length" class="cart-badge">
+          {{ cartStore.cart.items.length }}
+        </span>
+      </RouterLink>
+      <RouterLink to="/orders">Minu tellimused</RouterLink>
+      <RouterLink to="/users">Konto</RouterLink>
+    </nav>
   </header>
   <RouterView />
 </template>
-
 
 <style scoped>
 .navbar {
@@ -85,5 +81,4 @@ onMounted(() => {
   margin-left: 6px;
   vertical-align: top;
 }
-
 </style>

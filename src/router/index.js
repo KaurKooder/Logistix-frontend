@@ -2,15 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import BlogPosts from "@/views/BlogPosts.vue";
 import LoginView from "@/views/LoginView.vue";
 import EShopView from "@/views/EShopView.vue";
-import CoursesView from "@/views/CoursesView.vue";
+import Freight from "@/views/Freight.vue";
 import SingleBlogPostView from "@/views/SingleBlogPostView.vue";
 import CreatePost from "@/views/CreatePost.vue";
-import CoursesAddView from "@/views/CoursesAddView.vue";
+import PostLoad from "@/views/PostLoad.vue";
 import EShopAddProduct from "@/views/EShopAddProduct.vue";
 import CartView from "@/views/CartView.vue";
 import OrderView from "@/views/OrderView.vue";
 import HomePage from "@/views/HomePage.vue";
-import AboutView from "@/views/AboutView.vue";
+import Dashboard from "@/views/Dashboard.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,7 +23,7 @@ const router = createRouter({
     {
       path: '/about',
       name: 'about',
-      component: AboutView,
+      component: Dashboard,
     },
     {
       path: '/users',
@@ -59,12 +59,12 @@ const router = createRouter({
     {
       path: '/courses',
       name: 'Courses',
-      component: CoursesView
+      component: Freight
     },
     {
       path: '/courses/add',
       name: 'CreateCourse',
-      component: CoursesAddView
+      component: PostLoad
     },
     {
       path: '/cart',
@@ -75,6 +75,11 @@ const router = createRouter({
       path: '/orders',
       name: 'Orders',
       component: OrderView
+    },
+    {
+      path: '/post-load',
+      name: 'PostLoad',
+      component: PostLoad
     }
   ],
 })
