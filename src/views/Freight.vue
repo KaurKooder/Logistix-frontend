@@ -2,6 +2,13 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import apiClient from '@/services/api'
+import CountryLocationField from '@/components/CountryLocationField.vue'
+import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
+import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
+import { vehicleTypes } from '@/data/vehicleTypes'
+import { bodyTypes } from '@/data/bodyTypes'
+import { bodyCharacteristics } from '@/data/bodyCharacteristics'
+import { cargoTypes } from '@/data/cargoTypes'
 import '@/assets/css/coursesviewcss.css'
 
 const router = useRouter()
@@ -40,33 +47,37 @@ const isAdmin = computed(() => user.value?.role === 'ROLE_ADMIN')
 const userId = computed(() => user.value?.userId)
 
 // --- MITME AKNA / TABI HALDUS & TRANSPORDI FILTRID ---
+function createDefaultFilter() {
+  return {
+    from: { country: '', location: '', radius: '' },
+    to: { country: '', location: '', radius: '' },
+    loadingDate: { mode: '', start: '', end: '', dates: [] },
+    vehicleTypes: [],
+    bodyTypes: [],
+    bodyCharacteristics: [],
+    minLength: '',
+    maxLength: '',
+    minWeight: '',
+    maxWeight: '',
+    mayContain: [],
+    mayNotContain: [],
+    company: '',
+    page: 0,
+    size: 5,
+    sortBy: 'startDate',
+    sortDir: 'asc',
+  }
+}
+
 const tabs = ref([
   {
     id: 'tab-1',
     title: 'Otsing 1',
     courses: [],
     totalPages: 1,
-    filter: {
-      fromCountry: '',
-      fromRadius: '',
-      toCountry: '',
-      toRadius: '',
-      startDate: '',
-      endDate: '',
-      vehicleType: '',
-      bodyType: '',
-      minLength: '',
-      maxLength: '',
-      minWeight: '',
-      maxWeight: '',
-      mayContain: '',
-      mayNotContain: '',
-      company: '',
-      page: 0,
-      size: 5,
-      sortBy: 'startDate',
-      sortDir: 'asc',
-    },
+    showAdvanced: false,
+    expandedId: null,
+    filter: createDefaultFilter(),
   },
 ])
 
@@ -83,27 +94,9 @@ function addNewTab() {
     title: `Otsing ${tabs.value.length + 1}`,
     courses: [],
     totalPages: 1,
-    filter: {
-      fromCountry: '',
-      fromRadius: '',
-      toCountry: '',
-      toRadius: '',
-      startDate: '',
-      endDate: '',
-      vehicleType: '',
-      bodyType: '',
-      minLength: '',
-      maxLength: '',
-      minWeight: '',
-      maxWeight: '',
-      mayContain: '',
-      mayNotContain: '',
-      company: '',
-      page: 0,
-      size: 5,
-      sortBy: 'startDate',
-      sortDir: 'asc',
-    },
+    showAdvanced: false,
+    expandedId: null,
+    filter: createDefaultFilter(),
   })
   activeTabId.value = newId
   updateUrl()
@@ -131,10 +124,34 @@ function updateUrl() {
 
 async function loadCoursesForTab(tab) {
   try {
-    const { sortBy, sortDir, ...restOfFilters } = tab.filter
+    const f = tab.filter
     const params = {
-      ...restOfFilters,
-      sort: `${sortBy},${sortDir}`,
+      fromCountry: f.from.country || undefined,
+      fromLocation: f.from.location || undefined,
+      fromRadius: f.from.radius || undefined,
+      toCountry: f.to.country || undefined,
+      toLocation: f.to.location || undefined,
+      toRadius: f.to.radius || undefined,
+      vehicleTypes: f.vehicleTypes.length ? f.vehicleTypes : undefined,
+      bodyTypes: f.bodyTypes.length ? f.bodyTypes : undefined,
+      bodyCharacteristics: f.bodyCharacteristics.length ? f.bodyCharacteristics : undefined,
+      minLength: f.minLength || undefined,
+      maxLength: f.maxLength || undefined,
+      minWeight: f.minWeight || undefined,
+      maxWeight: f.maxWeight || undefined,
+      mayContain: f.mayContain.length ? f.mayContain : undefined,
+      mayNotContain: f.mayNotContain.length ? f.mayNotContain : undefined,
+      company: f.company || undefined,
+      page: f.page,
+      size: f.size,
+      sort: `${f.sortBy},${f.sortDir}`,
+    }
+
+    if (f.loadingDate.mode === 'exact' && f.loadingDate.dates.length) {
+      params.loadingDates = f.loadingDate.dates
+    } else {
+      params.startDate = f.loadingDate.start || undefined
+      params.endDate = f.loadingDate.end || undefined
     }
 
     if (isLoggedIn.value && userId.value) {
@@ -155,6 +172,27 @@ async function loadCoursesForTab(tab) {
 function searchActiveTab() {
   activeTab.value.filter.page = 0
   loadCoursesForTab(activeTab.value)
+}
+
+function toggleSort(tab, field) {
+  if (tab.filter.sortBy === field) {
+    tab.filter.sortDir = tab.filter.sortDir === 'asc' ? 'desc' : 'asc'
+  } else {
+    tab.filter.sortBy = field
+    tab.filter.sortDir = 'asc'
+  }
+  tab.filter.page = 0
+  loadCoursesForTab(tab)
+}
+
+function toggleRow(tab, id) {
+  tab.expandedId = tab.expandedId === id ? null : id
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  const [y, m, d] = iso.split('-')
+  return `${d}.${m}.${y}`
 }
 
 function nextPage() {
@@ -263,129 +301,108 @@ onMounted(() => {
         <!-- Filtrid -->
         <section class="freight-filter-section">
           <div class="freight-filter-row">
-            <div class="filter-box">
-              <label class="filter-label">FROM</label>
-              <div class="filter-inline-group">
-                <input
-                  v-model="activeTab.filter.fromCountry"
-                  placeholder="Country"
-                  class="courses-view-input"
-                />
-                <input
-                  v-model="activeTab.filter.fromRadius"
-                  placeholder="Radius"
-                  class="courses-view-input small-input"
-                />
-              </div>
-            </div>
+            <CountryLocationField v-model="activeTab.filter.from" label="FROM" show-radius />
+            <CountryLocationField v-model="activeTab.filter.to" label="TO" show-radius />
+
+            <LoadingDatePicker v-model="activeTab.filter.loadingDate" />
 
             <div class="filter-box">
-              <label class="filter-label">TO</label>
-              <div class="filter-inline-group">
-                <input
-                  v-model="activeTab.filter.toCountry"
-                  placeholder="Country"
-                  class="courses-view-input"
-                />
-                <input
-                  v-model="activeTab.filter.toRadius"
-                  placeholder="Radius"
-                  class="courses-view-input small-input"
-                />
-              </div>
-            </div>
-
-            <div class="filter-box">
-              <label class="filter-label">Loading date</label>
-              <div class="filter-inline-group">
-                <input
-                  v-model="activeTab.filter.startDate"
-                  type="date"
-                  class="courses-view-input"
-                />
-                <input v-model="activeTab.filter.endDate" type="date" class="courses-view-input" />
-              </div>
-            </div>
-
-            <div class="filter-box">
-              <label class="filter-label">Vehicle & Body type</label>
-              <div class="filter-inline-group">
-                <input
-                  v-model="activeTab.filter.vehicleType"
+              <label class="filter-label">Vehicle and body type</label>
+              <div class="vb-group">
+                <CheckboxDropdown
+                  v-model="activeTab.filter.vehicleTypes"
+                  :options="vehicleTypes"
                   placeholder="Vehicle"
-                  class="courses-view-input"
                 />
-                <input
-                  v-model="activeTab.filter.bodyType"
+                <CheckboxDropdown
+                  v-model="activeTab.filter.bodyTypes"
+                  :options="bodyTypes"
                   placeholder="Body"
-                  class="courses-view-input"
                 />
               </div>
             </div>
           </div>
 
-          <div class="freight-filter-row secondary-row">
-            <div class="filter-box">
-              <label class="filter-label">Length (m)</label>
-              <div class="filter-range-group">
-                <input
-                  v-model="activeTab.filter.minLength"
-                  placeholder="Min"
-                  class="courses-view-input"
-                />
-                <span>-</span>
-                <input
-                  v-model="activeTab.filter.maxLength"
-                  placeholder="Max"
-                  class="courses-view-input"
-                />
+          <div class="advanced-toggle-row">
+            <button
+              type="button"
+              class="advanced-toggle-btn"
+              @click="activeTab.showAdvanced = !activeTab.showAdvanced"
+            >
+              Advanced search {{ activeTab.showAdvanced ? '▲' : '▼' }}
+            </button>
+          </div>
+
+          <template v-if="activeTab.showAdvanced">
+            <div class="freight-filter-row secondary-row">
+              <div class="filter-box">
+                <label class="filter-label">Length (m)</label>
+                <div class="filter-range-group">
+                  <input
+                    v-model="activeTab.filter.minLength"
+                    placeholder="Min"
+                    class="courses-view-input"
+                  />
+                  <span>-</span>
+                  <input
+                    v-model="activeTab.filter.maxLength"
+                    placeholder="Max"
+                    class="courses-view-input"
+                  />
+                </div>
               </div>
+
+              <div class="filter-box">
+                <label class="filter-label">Weight (kg)</label>
+                <div class="filter-range-group">
+                  <input
+                    v-model="activeTab.filter.minWeight"
+                    placeholder="Min"
+                    class="courses-view-input"
+                  />
+                  <span>-</span>
+                  <input
+                    v-model="activeTab.filter.maxWeight"
+                    placeholder="Max"
+                    class="courses-view-input"
+                  />
+                </div>
+              </div>
+
+              <CheckboxDropdown
+                v-model="activeTab.filter.bodyCharacteristics"
+                :options="bodyCharacteristics"
+                label="Body characteristics"
+                placeholder="Any characteristics"
+              />
             </div>
 
-            <div class="filter-box">
-              <label class="filter-label">Weight (kg)</label>
-              <div class="filter-range-group">
-                <input
-                  v-model="activeTab.filter.minWeight"
-                  placeholder="Min"
-                  class="courses-view-input"
-                />
-                <span>-</span>
-                <input
-                  v-model="activeTab.filter.maxWeight"
-                  placeholder="Max"
-                  class="courses-view-input"
-                />
-              </div>
-            </div>
-
-            <div class="filter-box">
-              <label class="filter-label">May contain</label>
-              <input
+            <div class="freight-filter-row secondary-row">
+              <CheckboxDropdown
                 v-model="activeTab.filter.mayContain"
-                placeholder="May contain"
-                class="courses-view-input"
+                :options="cargoTypes"
+                label="May contain"
+                placeholder="Any goods"
               />
-            </div>
-
-            <div class="filter-box">
-              <label class="filter-label">May not contain</label>
-              <input
+              <CheckboxDropdown
                 v-model="activeTab.filter.mayNotContain"
-                placeholder="May not contain"
-                class="courses-view-input"
+                :options="cargoTypes"
+                label="May not contain"
+                placeholder="No restriction"
               />
-            </div>
 
-            <div class="filter-box">
-              <label class="filter-label">Company</label>
-              <input
-                v-model="activeTab.filter.company"
-                placeholder="Company"
-                class="courses-view-input"
-              />
+              <div class="filter-box">
+                <label class="filter-label">Company</label>
+                <input
+                  v-model="activeTab.filter.company"
+                  placeholder="Company"
+                  class="courses-view-input"
+                />
+              </div>
             </div>
+          </template>
 
+          <div class="find-row">
             <button @click="searchActiveTab" class="courses-view-search-btn find-action-btn">
               Find
             </button>
@@ -412,36 +429,151 @@ onMounted(() => {
           </button>
         </div>
 
-        <div class="courses-view-list">
-          <div v-for="c in activeTab.courses" :key="c.id" class="courses-view-card">
-            <div class="courses-view-card-header">
-              <h3 class="courses-view-card-title">{{ c.name }}</h3>
-              <span class="courses-view-price-tag">{{ c.price }} €</span>
-            </div>
-
-            <div class="courses-view-card-details">
-              <p>
-                <strong>Marsruut:</strong> {{ c.fromCountry || '?' }} ➔ {{ c.toCountry || '?' }}
-              </p>
-              <p><strong>Kuupäev:</strong> {{ c.startDate || 'Määramata' }}</p>
-              <p class="courses-view-description">{{ c.description }}</p>
-            </div>
-
-            <div class="courses-view-card-actions">
-              <template v-if="isLoggedIn && !isAdmin">
-                <button v-if="!c.registered" @click="register(c.id)" class="courses-view-reg-btn">
-                  Registreeru
-                </button>
-                <button v-else @click="unregister(c.id)" class="courses-view-unreg-btn">
-                  Tühista registreerimine
-                </button>
+        <div class="freight-table-wrap">
+          <table class="freight-table">
+            <thead>
+              <tr>
+                <th class="freight-col-arrow"></th>
+                <th class="sortable" @click="toggleSort(activeTab, 'startDate')">
+                  Date
+                  <span v-if="activeTab.filter.sortBy === 'startDate'" class="sort-arrow">{{
+                    activeTab.filter.sortDir === 'asc' ? '▲' : '▼'
+                  }}</span>
+                </th>
+                <th>Trip</th>
+                <th class="sortable" @click="toggleSort(activeTab, 'price')">
+                  Price
+                  <span v-if="activeTab.filter.sortBy === 'price'" class="sort-arrow">{{
+                    activeTab.filter.sortDir === 'asc' ? '▲' : '▼'
+                  }}</span>
+                </th>
+                <th>Description</th>
+                <th>Company</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-if="activeTab.courses.length === 0">
+                <tr>
+                  <td colspan="6" class="freight-empty-row">No freight postings found.</td>
+                </tr>
               </template>
+              <template v-for="c in activeTab.courses" :key="c.id">
+                <tr
+                  class="freight-row"
+                  :class="{ expanded: activeTab.expandedId === c.id }"
+                  @click="toggleRow(activeTab, c.id)"
+                >
+                  <td class="freight-col-arrow">{{ activeTab.expandedId === c.id ? '▼' : '▶' }}</td>
+                  <td>
+                    <div>{{ formatDate(c.startDate) || 'Määramata' }}</div>
+                    <div v-if="c.endDate && c.endDate !== c.startDate" class="freight-row-sub">
+                      {{ formatDate(c.endDate) }}
+                    </div>
+                  </td>
+                  <td>
+                    <div>{{ c.fromCountry || '?' }}<span v-if="c.fromLocation"> {{ c.fromLocation }}</span></div>
+                    <div class="freight-row-sub">
+                      ➔ {{ c.toCountry || '?' }}<span v-if="c.toLocation"> {{ c.toLocation }}</span>
+                    </div>
+                  </td>
+                  <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
+                  <td class="freight-row-desc">
+                    {{ c.description || c.mayContain?.[0] || '—' }}
+                  </td>
+                  <td>{{ c.company || '—' }}</td>
+                </tr>
 
-              <p v-if="!isLoggedIn" class="courses-view-guest-hint">
-                <em>Logi sisse registreerumiseks</em>
-              </p>
-            </div>
-          </div>
+                <tr v-if="activeTab.expandedId === c.id" class="freight-detail-row">
+                  <td colspan="6">
+                    <div class="freight-detail-panel">
+                      <div class="freight-detail-grid">
+                        <div class="freight-detail-route">
+                          <div class="freight-detail-stop">
+                            <span class="freight-detail-marker load"></span>
+                            <div>
+                              <div class="freight-detail-place">
+                                {{ c.fromCountry || '?' }}<span v-if="c.fromLocation">
+                                  {{ c.fromLocation }}</span
+                                >
+                              </div>
+                              <div class="freight-detail-date">
+                                {{ formatDate(c.startDate) || 'Määramata' }}
+                              </div>
+                            </div>
+                          </div>
+                          <div class="freight-detail-stop">
+                            <span class="freight-detail-marker unload"></span>
+                            <div>
+                              <div class="freight-detail-place">
+                                {{ c.toCountry || '?' }}<span v-if="c.toLocation">
+                                  {{ c.toLocation }}</span
+                                >
+                              </div>
+                              <div class="freight-detail-date">
+                                {{ formatDate(c.endDate) || 'Määramata' }}
+                              </div>
+                            </div>
+                          </div>
+                          <div class="freight-detail-price-block">
+                            <span class="freight-detail-price">{{ c.price != null ? c.price + ' €' : '—' }}</span>
+                          </div>
+                        </div>
+
+                        <div class="freight-detail-col">
+                          <h4>Description</h4>
+                          <p v-if="c.weight">Load: {{ c.weight }} kg</p>
+                          <p v-if="c.length">Length: {{ c.length }} m</p>
+                          <p>{{ c.description || '—' }}</p>
+                          <p v-if="c.mayContain?.length">
+                            <strong>May contain:</strong> {{ c.mayContain.join(', ') }}
+                          </p>
+                          <p v-if="c.mayNotContain?.length">
+                            <strong>May not contain:</strong> {{ c.mayNotContain.join(', ') }}
+                          </p>
+                        </div>
+
+                        <div class="freight-detail-col">
+                          <h4>Truck type</h4>
+                          <p>{{ c.vehicleType || '—' }}</p>
+                          <h4>Body type</h4>
+                          <p>{{ c.bodyType || '—' }}</p>
+                          <template v-if="c.bodyCharacteristics?.length">
+                            <h4>Characteristics</h4>
+                            <p>{{ c.bodyCharacteristics.join(', ') }}</p>
+                          </template>
+                        </div>
+                      </div>
+
+                      <div class="freight-detail-footer">
+                        <span v-if="c.name" class="freight-detail-ref">{{ c.name }}</span>
+                        <div class="freight-detail-actions">
+                          <template v-if="isLoggedIn && !isAdmin">
+                            <button
+                              v-if="!c.registered"
+                              @click.stop="register(c.id)"
+                              class="courses-view-reg-btn"
+                            >
+                              Registreeru
+                            </button>
+                            <button
+                              v-else
+                              @click.stop="unregister(c.id)"
+                              class="courses-view-unreg-btn"
+                            >
+                              Tühista registreerimine
+                            </button>
+                          </template>
+                          <span v-if="!isLoggedIn" class="courses-view-guest-hint">
+                            <em>Logi sisse registreerumiseks</em>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -531,11 +663,49 @@ onMounted(() => {
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
+  align-items: start;
 }
 
 .secondary-row {
-  grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr auto;
+  grid-template-columns: repeat(3, 1fr);
   align-items: end;
+}
+
+.vb-group {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+.vb-group > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.advanced-toggle-row {
+  display: flex;
+  justify-content: center;
+}
+
+.advanced-toggle-btn {
+  background: transparent;
+  border: 1px solid #d4a76a;
+  color: #b55a30;
+  padding: 6px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.advanced-toggle-btn:hover {
+  background: #fdf3e4;
+}
+
+.find-row {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .filter-box {
@@ -576,5 +746,202 @@ onMounted(() => {
   height: 38px;
   padding: 0 16px;
   white-space: nowrap;
+}
+
+.freight-table-wrap {
+  overflow-x: auto;
+}
+
+.freight-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.freight-table thead th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #b55a30;
+  text-transform: uppercase;
+  border-bottom: 2px solid #d4a76a;
+  white-space: nowrap;
+}
+
+.freight-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.freight-table thead th.sortable:hover {
+  color: #8f4522;
+}
+
+.sort-arrow {
+  font-size: 0.65rem;
+  margin-left: 2px;
+}
+
+.freight-col-arrow {
+  width: 24px;
+  text-align: center;
+  color: #999;
+}
+
+.freight-row {
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+  transition: background 0.15s;
+}
+
+.freight-row:hover {
+  background: #fdf6ea;
+}
+
+.freight-row.expanded {
+  background: #fdf3e4;
+}
+
+.freight-row td {
+  padding: 10px;
+  vertical-align: top;
+  color: #333;
+}
+
+.freight-row-sub {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 2px;
+}
+
+.freight-row-price {
+  font-weight: 700;
+  color: #b55a30;
+  white-space: nowrap;
+}
+
+.freight-row-desc {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.freight-empty-row {
+  text-align: center;
+  padding: 30px 10px;
+  color: #999;
+}
+
+.freight-detail-row td {
+  padding: 0;
+  border-bottom: 1px solid #eee;
+}
+
+.freight-detail-panel {
+  background: #fdfcf9;
+  padding: 20px 24px;
+  border-left: 3px solid #d4a76a;
+}
+
+.freight-detail-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 24px;
+}
+
+.freight-detail-route {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.freight-detail-stop {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.freight-detail-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.freight-detail-marker.load {
+  background: #2e8b57;
+}
+
+.freight-detail-marker.unload {
+  background: #4a90d9;
+}
+
+.freight-detail-place {
+  font-weight: 600;
+  color: #333;
+}
+
+.freight-detail-date {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.freight-detail-price-block {
+  margin-top: 4px;
+}
+
+.freight-detail-price {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #b55a30;
+}
+
+.freight-detail-col h4 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b55a30;
+  margin: 0 0 4px;
+}
+
+.freight-detail-col p {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: #444;
+}
+
+.freight-detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.freight-detail-ref {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.freight-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.freight-detail-actions .courses-view-reg-btn,
+.freight-detail-actions .courses-view-unreg-btn {
+  width: auto;
+  padding: 8px 20px;
+}
+
+@media (max-width: 800px) {
+  .freight-detail-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

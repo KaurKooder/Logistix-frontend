@@ -2,27 +2,38 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '@/services/api'
+import CountryLocationField from '@/components/CountryLocationField.vue'
+import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
+import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
+import { vehicleTypes } from '@/data/vehicleTypes'
+import { bodyTypes } from '@/data/bodyTypes'
+import { bodyCharacteristics } from '@/data/bodyCharacteristics'
+import { cargoTypes } from '@/data/cargoTypes'
 import '@/assets/css/coursesaddcss.css'
 
 const router = useRouter()
 
+function createEmptyFreight() {
+  return {
+    name: '',
+    from: { country: '', location: '' },
+    to: { country: '', location: '' },
+    loadingDate: { mode: '', start: '', end: '', dates: [] },
+    vehicleType: '',
+    bodyType: '',
+    bodyCharacteristics: [],
+    length: '',
+    weight: '',
+    mayContain: [],
+    mayNotContain: [],
+    company: '',
+    price: '',
+    description: '',
+  }
+}
+
 // Admin create freight posting
-const newFreight = ref({
-  name: '',
-  fromCountry: '',
-  toCountry: '',
-  startDate: '',
-  endDate: '',
-  vehicleType: '',
-  bodyType: '',
-  length: '',
-  weight: '',
-  mayContain: '',
-  mayNotContain: '',
-  company: '',
-  price: '',
-  description: '',
-})
+const newFreight = ref(createEmptyFreight())
 
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -62,22 +73,24 @@ onMounted(() => {
 })
 
 function resetForm() {
-  newFreight.value = {
-    name: '',
-    fromCountry: '',
-    toCountry: '',
-    startDate: '',
-    endDate: '',
-    vehicleType: '',
-    bodyType: '',
-    length: '',
-    weight: '',
-    mayContain: '',
-    mayNotContain: '',
-    company: '',
-    price: '',
-    description: '',
+  newFreight.value = createEmptyFreight()
+}
+
+// The picker supports "Exact dates" (a set of specific days) and "Period" (a
+// range). A single freight posting has one loading day/window, so this reduces
+// whichever mode was used down to a single startDate/endDate pair.
+function resolveLoadingDates() {
+  const ld = newFreight.value.loadingDate
+  if (ld.mode === 'exact') {
+    const day = ld.dates[0] || ''
+    return { startDate: day, endDate: day || undefined }
   }
+  return { startDate: ld.start || '', endDate: ld.end || ld.start || undefined }
+}
+
+function hasLoadingDate() {
+  const ld = newFreight.value.loadingDate
+  return ld.mode === 'exact' ? ld.dates.length > 0 : !!ld.start
 }
 
 async function createFreight() {
@@ -85,9 +98,9 @@ async function createFreight() {
   successMessage.value = ''
 
   if (
-    !newFreight.value.fromCountry ||
-    !newFreight.value.toCountry ||
-    !newFreight.value.startDate ||
+    !newFreight.value.from.country ||
+    !newFreight.value.to.country ||
+    !hasLoadingDate() ||
     !newFreight.value.price
   ) {
     errorMessage.value = 'Palun täida kohustuslikud väljad: From, To, Loading date, Price!'
@@ -97,18 +110,27 @@ async function createFreight() {
   isLoading.value = true
 
   try {
+    const { startDate, endDate } = resolveLoadingDates()
+
     const freightData = {
       name: newFreight.value.name || undefined,
-      fromCountry: newFreight.value.fromCountry,
-      toCountry: newFreight.value.toCountry,
-      startDate: newFreight.value.startDate,
-      endDate: newFreight.value.endDate || undefined,
+      fromCountry: newFreight.value.from.country,
+      fromLocation: newFreight.value.from.location || undefined,
+      toCountry: newFreight.value.to.country,
+      toLocation: newFreight.value.to.location || undefined,
+      startDate,
+      endDate,
       vehicleType: newFreight.value.vehicleType || undefined,
       bodyType: newFreight.value.bodyType || undefined,
+      bodyCharacteristics: newFreight.value.bodyCharacteristics.length
+        ? newFreight.value.bodyCharacteristics
+        : undefined,
       length: newFreight.value.length ? Number.parseFloat(newFreight.value.length) : undefined,
       weight: newFreight.value.weight ? Number.parseFloat(newFreight.value.weight) : undefined,
-      mayContain: newFreight.value.mayContain || undefined,
-      mayNotContain: newFreight.value.mayNotContain || undefined,
+      mayContain: newFreight.value.mayContain.length ? newFreight.value.mayContain : undefined,
+      mayNotContain: newFreight.value.mayNotContain.length
+        ? newFreight.value.mayNotContain
+        : undefined,
       company: newFreight.value.company || undefined,
       price: Number.parseFloat(newFreight.value.price),
       description: newFreight.value.description || undefined,
@@ -161,75 +183,54 @@ function goBack() {
 
         <div class="course-add-form">
           <div class="course-add-row">
-            <div class="course-add-field">
-              <label for="freight-from" class="course-add-label">From *</label>
-              <input
-                id="freight-from"
-                v-model="newFreight.fromCountry"
-                placeholder="Loading country"
-                :disabled="isLoading"
-                class="course-add-input"
-              />
-            </div>
-
-            <div class="course-add-field">
-              <label for="freight-to" class="course-add-label">To *</label>
-              <input
-                id="freight-to"
-                v-model="newFreight.toCountry"
-                placeholder="Unloading country"
-                :disabled="isLoading"
-                class="course-add-input"
-              />
-            </div>
+            <CountryLocationField
+              v-model="newFreight.from"
+              label="From"
+              :required="true"
+              :allow-empty-country="false"
+              location-placeholder="Loading ZIP / City"
+            />
+            <CountryLocationField
+              v-model="newFreight.to"
+              label="To"
+              :required="true"
+              :allow-empty-country="false"
+              location-placeholder="Unloading ZIP / City"
+            />
           </div>
 
           <div class="course-add-row">
-            <div class="course-add-field">
-              <label for="freight-start" class="course-add-label">Loading date *</label>
-              <input
-                id="freight-start"
-                v-model="newFreight.startDate"
-                type="date"
-                :disabled="isLoading"
-                class="course-add-input"
-              />
-            </div>
-
-            <div class="course-add-field">
-              <label for="freight-end" class="course-add-label">Delivery date</label>
-              <input
-                id="freight-end"
-                v-model="newFreight.endDate"
-                type="date"
-                :disabled="isLoading"
-                class="course-add-input"
-              />
-            </div>
+            <LoadingDatePicker
+              v-model="newFreight.loadingDate"
+              label="Loading date *"
+              :multiple-exact="false"
+            />
           </div>
 
           <div class="course-add-row">
-            <div class="course-add-field">
-              <label for="freight-vehicle" class="course-add-label">Vehicle type</label>
-              <input
-                id="freight-vehicle"
-                v-model="newFreight.vehicleType"
-                placeholder="e.g. Tautliner"
-                :disabled="isLoading"
-                class="course-add-input"
-              />
-            </div>
+            <CheckboxDropdown
+              v-model="newFreight.vehicleType"
+              :options="vehicleTypes"
+              :multiple="false"
+              label="Vehicle type"
+              placeholder="Select vehicle type"
+            />
+            <CheckboxDropdown
+              v-model="newFreight.bodyType"
+              :options="bodyTypes"
+              :multiple="false"
+              label="Body type"
+              placeholder="Select body type"
+            />
+          </div>
 
-            <div class="course-add-field">
-              <label for="freight-body" class="course-add-label">Body type</label>
-              <input
-                id="freight-body"
-                v-model="newFreight.bodyType"
-                placeholder="e.g. Curtainsider"
-                :disabled="isLoading"
-                class="course-add-input"
-              />
-            </div>
+          <div class="course-add-row">
+            <CheckboxDropdown
+              v-model="newFreight.bodyCharacteristics"
+              :options="bodyCharacteristics"
+              label="Body characteristics"
+              placeholder="Select equipment/certificates"
+            />
           </div>
 
           <div class="course-add-row">
@@ -260,25 +261,18 @@ function goBack() {
             </div>
           </div>
 
-          <div class="course-add-field">
-            <label for="freight-may-contain" class="course-add-label">May contain</label>
-            <input
-              id="freight-may-contain"
+          <div class="course-add-row">
+            <CheckboxDropdown
               v-model="newFreight.mayContain"
+              :options="cargoTypes"
+              label="May contain"
               placeholder="Goods this freight may be combined with"
-              :disabled="isLoading"
-              class="course-add-input"
             />
-          </div>
-
-          <div class="course-add-field">
-            <label for="freight-may-not-contain" class="course-add-label">May not contain</label>
-            <input
-              id="freight-may-not-contain"
+            <CheckboxDropdown
               v-model="newFreight.mayNotContain"
+              :options="cargoTypes"
+              label="May not contain"
               placeholder="Goods this freight may not be combined with"
-              :disabled="isLoading"
-              class="course-add-input"
             />
           </div>
 
