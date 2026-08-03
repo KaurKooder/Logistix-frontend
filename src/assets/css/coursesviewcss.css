@@ -1,25 +1,25 @@
 .courses-view-outer-container {
-  background-color: #F5E9D0;
+  background-color: #ffffff;
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 40px 20px;
+  padding: 0;
   font-family: Arial, sans-serif;
 }
 
 .courses-view-paper-block {
   background-color: #ffffff;
-  max-width: 1100px;
   width: 100%;
-  padding: 60px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  padding: 40px 60px;
+  box-shadow: none;
   color: #4a4a4a;
+  box-sizing: border-box;
 }
 
 .courses-view-header-section {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   border-bottom: 1px solid #e0e0e0;
   margin-bottom: 30px;

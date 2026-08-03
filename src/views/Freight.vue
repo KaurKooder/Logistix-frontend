@@ -49,8 +49,8 @@ const userId = computed(() => user.value?.userId)
 // --- MITME AKNA / TABI HALDUS & TRANSPORDI FILTRID ---
 function createDefaultFilter() {
   return {
-    from: { country: '', location: '', radius: '' },
-    to: { country: '', location: '', radius: '' },
+    from: { mode: 'radius', country: '', countries: [], location: '', radius: '' },
+    to: { mode: 'radius', country: '', countries: [], location: '', radius: '' },
     loadingDate: { mode: '', start: '', end: '', dates: [] },
     vehicleTypes: [],
     bodyTypes: [],
@@ -77,6 +77,7 @@ const tabs = ref([
     totalPages: 1,
     showAdvanced: false,
     expandedId: null,
+    muted: false,
     filter: createDefaultFilter(),
   },
 ])
@@ -87,6 +88,24 @@ const activeTab = computed(() => {
   return tabs.value.find((t) => t.id === activeTabId.value) || tabs.value[0]
 })
 
+// --- Tab title inline rename (double-click to edit) ---
+const editingTabId = ref(null)
+
+function startEditTab(tab) {
+  editingTabId.value = tab.id
+}
+
+function finishEditTab(tab) {
+  if (!tab.title || !tab.title.trim()) {
+    tab.title = 'Otsing'
+  }
+  editingTabId.value = null
+}
+
+function toggleTabMute(tab) {
+  tab.muted = !tab.muted
+}
+
 function addNewTab() {
   const newId = 'tab-' + Date.now()
   tabs.value.push({
@@ -96,6 +115,7 @@ function addNewTab() {
     totalPages: 1,
     showAdvanced: false,
     expandedId: null,
+    muted: false,
     filter: createDefaultFilter(),
   })
   activeTabId.value = newId
@@ -125,13 +145,32 @@ function updateUrl() {
 async function loadCoursesForTab(tab) {
   try {
     const f = tab.filter
+
+    // "Radius" mode searches a single country (+ optional location/radius);
+    // "Country selection" mode searches across a whole set of countries at once.
+    function countryFilterParams(side, locationKey, radiusKey) {
+      if (side.mode === 'countries') {
+        return {
+          countries: side.countries?.length ? side.countries : undefined,
+        }
+      }
+      return {
+        countries: side.country ? [side.country] : undefined,
+        [locationKey]: side.location || undefined,
+        [radiusKey]: side.radius || undefined,
+      }
+    }
+
+    const fromParams = countryFilterParams(f.from, 'fromLocation', 'fromRadius')
+    const toParams = countryFilterParams(f.to, 'toLocation', 'toRadius')
+
     const params = {
-      fromCountry: f.from.country || undefined,
-      fromLocation: f.from.location || undefined,
-      fromRadius: f.from.radius || undefined,
-      toCountry: f.to.country || undefined,
-      toLocation: f.to.location || undefined,
-      toRadius: f.to.radius || undefined,
+      fromCountries: fromParams.countries,
+      fromLocation: fromParams.fromLocation,
+      fromRadius: fromParams.fromRadius,
+      toCountries: toParams.countries,
+      toLocation: toParams.toLocation,
+      toRadius: toParams.toRadius,
       vehicleTypes: f.vehicleTypes.length ? f.vehicleTypes : undefined,
       bodyTypes: f.bodyTypes.length ? f.bodyTypes : undefined,
       bodyCharacteristics: f.bodyCharacteristics.length ? f.bodyCharacteristics : undefined,
@@ -193,6 +232,20 @@ function formatDate(iso) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-')
   return `${d}.${m}.${y}`
+}
+
+// e.g. "EE-Tallinn" - country code and location joined with a hyphen, not a space.
+function formatPlace(country, location) {
+  if (!country) return '?'
+  return location ? `${country}-${location}` : country
+}
+
+function formatLength(len) {
+  return len != null && len !== '' ? `${len} m` : ''
+}
+
+function formatWeight(weight) {
+  return weight != null && weight !== '' ? `${weight} kg` : ''
 }
 
 function nextPage() {
@@ -266,7 +319,29 @@ onMounted(() => {
             updateUrl()
             "
           >
-            <span class="tab-title">{{ tab.title }}</span>
+            <input
+              v-if="editingTabId === tab.id"
+              v-model="tab.title"
+              class="tab-title-input"
+              @click.stop
+              @blur="finishEditTab(tab)"
+              @keyup.enter="finishEditTab(tab)"
+            />
+            <span
+              v-else
+              class="tab-title"
+              @dblclick.stop="startEditTab(tab)"
+              >{{ tab.title }}</span
+            >
+            <button
+              type="button"
+              class="tab-notif-btn"
+              :class="{ muted: tab.muted }"
+              :title="tab.muted ? 'Notifications muted' : 'Notifications on'"
+              @click.stop="toggleTabMute(tab)"
+            >
+              {{ tab.muted ? '🔕' : '🔔' }}
+            </button>
             <button
               v-if="tabs.length > 1"
               @click.stop="(e) => closeTab(tab.id, e)"
@@ -279,9 +354,8 @@ onMounted(() => {
         <button @click="addNewTab" class="tab-add-btn" title="Ava uus otsinguaken">+</button>
       </div>
 
-      <header class="courses-view-header-section">
-        <h1 class="courses-view-page-title">FREIGHT - {{ activeTab.title }}</h1>
-        <button v-if="isAdmin" @click="goToAddCourse" class="courses-view-add-btn">
+      <header v-if="isAdmin" class="courses-view-header-section">
+        <button @click="goToAddCourse" class="courses-view-add-btn">
           + Add freight
         </button>
       </header>
@@ -301,8 +375,18 @@ onMounted(() => {
         <!-- Filtrid -->
         <section class="freight-filter-section">
           <div class="freight-filter-row">
-            <CountryLocationField v-model="activeTab.filter.from" label="FROM" show-radius />
-            <CountryLocationField v-model="activeTab.filter.to" label="TO" show-radius />
+            <CountryLocationField
+              v-model="activeTab.filter.from"
+              label="FROM"
+              show-radius
+              allow-multi-country
+            />
+            <CountryLocationField
+              v-model="activeTab.filter.to"
+              label="TO"
+              show-radius
+              allow-multi-country
+            />
 
             <LoadingDatePicker v-model="activeTab.filter.loadingDate" />
 
@@ -336,36 +420,60 @@ onMounted(() => {
           <template v-if="activeTab.showAdvanced">
             <div class="freight-filter-row secondary-row">
               <div class="filter-box">
-                <label class="filter-label">Length (m)</label>
+                <label class="filter-label">Length</label>
                 <div class="filter-range-group">
-                  <input
-                    v-model="activeTab.filter.minLength"
-                    placeholder="Min"
-                    class="courses-view-input"
-                  />
+                  <div class="unit-input-group">
+                    <input
+                      v-model="activeTab.filter.minLength"
+                      type="number"
+                      min="0"
+                      inputmode="numeric"
+                      placeholder="Min"
+                      class="courses-view-input unit-input"
+                    />
+                    <span class="unit-suffix">m</span>
+                  </div>
                   <span>-</span>
-                  <input
-                    v-model="activeTab.filter.maxLength"
-                    placeholder="Max"
-                    class="courses-view-input"
-                  />
+                  <div class="unit-input-group">
+                    <input
+                      v-model="activeTab.filter.maxLength"
+                      type="number"
+                      min="0"
+                      inputmode="numeric"
+                      placeholder="Max"
+                      class="courses-view-input unit-input"
+                    />
+                    <span class="unit-suffix">m</span>
+                  </div>
                 </div>
               </div>
 
               <div class="filter-box">
-                <label class="filter-label">Weight (kg)</label>
+                <label class="filter-label">Weight</label>
                 <div class="filter-range-group">
-                  <input
-                    v-model="activeTab.filter.minWeight"
-                    placeholder="Min"
-                    class="courses-view-input"
-                  />
+                  <div class="unit-input-group">
+                    <input
+                      v-model="activeTab.filter.minWeight"
+                      type="number"
+                      min="0"
+                      inputmode="numeric"
+                      placeholder="Min"
+                      class="courses-view-input unit-input"
+                    />
+                    <span class="unit-suffix">kg</span>
+                  </div>
                   <span>-</span>
-                  <input
-                    v-model="activeTab.filter.maxWeight"
-                    placeholder="Max"
-                    class="courses-view-input"
-                  />
+                  <div class="unit-input-group">
+                    <input
+                      v-model="activeTab.filter.maxWeight"
+                      type="number"
+                      min="0"
+                      inputmode="numeric"
+                      placeholder="Max"
+                      class="courses-view-input unit-input"
+                    />
+                    <span class="unit-suffix">kg</span>
+                  </div>
                 </div>
               </div>
 
@@ -465,20 +573,25 @@ onMounted(() => {
                 >
                   <td class="freight-col-arrow">{{ activeTab.expandedId === c.id ? '▼' : '▶' }}</td>
                   <td>
-                    <div>{{ formatDate(c.startDate) || 'Määramata' }}</div>
-                    <div v-if="c.endDate && c.endDate !== c.startDate" class="freight-row-sub">
-                      {{ formatDate(c.endDate) }}
+                    <div class="freight-date-block">
+                      <span class="freight-date-connector"></span>
+                      <div class="freight-date-text">
+                        <div>{{ formatDate(c.startDate) || 'Määramata' }}</div>
+                        <div v-if="c.endDate && c.endDate !== c.startDate" class="freight-row-sub">
+                          {{ formatDate(c.endDate) }}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td>
-                    <div>{{ c.fromCountry || '?' }}<span v-if="c.fromLocation"> {{ c.fromLocation }}</span></div>
-                    <div class="freight-row-sub">
-                      ➔ {{ c.toCountry || '?' }}<span v-if="c.toLocation"> {{ c.toLocation }}</span>
-                    </div>
+                    <div class="freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.fromCountry, c.fromLocation) }}</div>
+                    <div class="freight-row-sub freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.toCountry, c.toLocation) }}</div>
                   </td>
                   <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
                   <td class="freight-row-desc">
-                    {{ c.description || c.mayContain?.[0] || '—' }}
+                    <div v-if="c.length">{{ formatLength(c.length) }}</div>
+                    <div v-if="c.weight">{{ formatWeight(c.weight) }}</div>
+                    <div>{{ c.description || c.mayContain?.[0] || '—' }}</div>
                   </td>
                   <td>{{ c.company || '—' }}</td>
                 </tr>
@@ -492,9 +605,7 @@ onMounted(() => {
                             <span class="freight-detail-marker load"></span>
                             <div>
                               <div class="freight-detail-place">
-                                {{ c.fromCountry || '?' }}<span v-if="c.fromLocation">
-                                  {{ c.fromLocation }}</span
-                                >
+                                {{ formatPlace(c.fromCountry, c.fromLocation) }}
                               </div>
                               <div class="freight-detail-date">
                                 {{ formatDate(c.startDate) || 'Määramata' }}
@@ -505,9 +616,7 @@ onMounted(() => {
                             <span class="freight-detail-marker unload"></span>
                             <div>
                               <div class="freight-detail-place">
-                                {{ c.toCountry || '?' }}<span v-if="c.toLocation">
-                                  {{ c.toLocation }}</span
-                                >
+                                {{ formatPlace(c.toCountry, c.toLocation) }}
                               </div>
                               <div class="freight-detail-date">
                                 {{ formatDate(c.endDate) || 'Määramata' }}
@@ -593,7 +702,6 @@ onMounted(() => {
 .tabs-container {
   display: flex;
   gap: 6px;
-  flex: 1;
 }
 .search-tab {
   display: flex;
@@ -614,6 +722,32 @@ onMounted(() => {
   font-weight: 600;
   border-bottom: 2px solid #fff;
 }
+.tab-title-input {
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: 1px solid #d4a76a;
+  border-radius: 3px;
+  padding: 1px 4px;
+  width: 90px;
+  background: #fff;
+}
+
+.tab-notif-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 2px;
+  opacity: 0.85;
+  line-height: 1;
+}
+.tab-notif-btn.muted {
+  opacity: 0.4;
+}
+.tab-notif-btn:hover {
+  opacity: 1;
+}
+
 .tab-close-btn {
   background: transparent;
   border: none;
@@ -742,6 +876,27 @@ onMounted(() => {
   max-width: 75px;
 }
 
+.unit-input-group {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.unit-input {
+  width: 100%;
+  padding-right: 28px;
+}
+
+.unit-suffix {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: #999;
+  pointer-events: none;
+}
+
 .find-action-btn {
   height: 38px;
   padding: 0 16px;
@@ -823,9 +978,41 @@ onMounted(() => {
 
 .freight-row-desc {
   max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.freight-row-desc div {
+  margin-bottom: 2px;
+}
+
+.freight-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.freight-line-arrow {
+  color: #999;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.freight-date-block {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.freight-date-connector {
+  width: 2px;
+  background: #d4a76a;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+.freight-date-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .freight-empty-row {
