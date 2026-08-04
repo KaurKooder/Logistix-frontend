@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import apiClient from '@/services/api'
 import CountryLocationField from '@/components/CountryLocationField.vue'
@@ -63,7 +63,7 @@ function createDefaultFilter() {
     mayNotContain: [],
     company: '',
     page: 0,
-    size: 5,
+    size: 10,
     sortBy: 'startDate',
     sortDir: 'asc',
   }
@@ -78,6 +78,7 @@ const tabs = ref([
     showAdvanced: false,
     expandedId: null,
     muted: false,
+    loadingMore: false,
     filter: createDefaultFilter(),
   },
 ])
@@ -116,6 +117,7 @@ function addNewTab() {
     showAdvanced: false,
     expandedId: null,
     muted: false,
+    loadingMore: false,
     filter: createDefaultFilter(),
   })
   activeTabId.value = newId
@@ -142,7 +144,7 @@ function updateUrl() {
   })
 }
 
-async function loadCoursesForTab(tab) {
+async function loadCoursesForTab(tab, { append = false } = {}) {
   try {
     const f = tab.filter
 
@@ -198,7 +200,8 @@ async function loadCoursesForTab(tab) {
     }
 
     const res = await apiClient.get('/courses/search', { params })
-    tab.courses = res.data.content || []
+    const newCourses = res.data.content || []
+    tab.courses = append ? [...tab.courses, ...newCourses] : newCourses
     tab.totalPages = res.data.totalPages || 1
   } catch (error) {
     console.error('Error loading freight:', error)
@@ -206,6 +209,17 @@ async function loadCoursesForTab(tab) {
       localStorage.removeItem('jwt')
     }
   }
+}
+
+// Called by the IntersectionObserver when the sentinel at the bottom of the
+// results list scrolls into view - loads the next page and appends it.
+async function loadMoreForTab(tab) {
+  if (!tab || tab.loadingMore) return
+  if (tab.filter.page + 1 >= tab.totalPages) return
+  tab.loadingMore = true
+  tab.filter.page += 1
+  await loadCoursesForTab(tab, { append: true })
+  tab.loadingMore = false
 }
 
 function searchActiveTab() {
@@ -271,19 +285,6 @@ function formatWeight(weight) {
   return weight != null && weight !== '' ? `${weight} kg` : ''
 }
 
-function nextPage() {
-  if (activeTab.value.filter.page < activeTab.value.totalPages - 1) {
-    activeTab.value.filter.page++
-    loadCoursesForTab(activeTab.value)
-  }
-}
-function prevPage() {
-  if (activeTab.value.filter.page > 0) {
-    activeTab.value.filter.page--
-    loadCoursesForTab(activeTab.value)
-  }
-}
-
 async function register(courseId) {
   if (!isLoggedIn.value) {
     alert('Palun logi sisse!')
@@ -310,6 +311,23 @@ function goToAddCourse() {
   router.push('/courses/add')
 }
 
+// --- Infinite scroll: a sentinel div sits right after the results table.
+// When it scrolls into view, load the next page for whichever tab is active. ---
+const sentinelEl = ref(null)
+let scrollObserver = null
+
+function setupScrollObserver() {
+  scrollObserver = new IntersectionObserver(
+    (entries) => {
+      if (entries[0]?.isIntersecting) {
+        loadMoreForTab(activeTab.value)
+      }
+    },
+    { rootMargin: '250px' },
+  )
+  if (sentinelEl.value) scrollObserver.observe(sentinelEl.value)
+}
+
 watch(
   () => route.query.tabId,
   (newId) => {
@@ -324,6 +342,11 @@ onMounted(() => {
     activeTabId.value = route.query.tabId
   }
   loadCoursesForTab(activeTab.value)
+  nextTick(() => setupScrollObserver())
+})
+
+onUnmounted(() => {
+  scrollObserver?.disconnect()
 })
 </script>
 
@@ -384,17 +407,6 @@ onMounted(() => {
       </header>
 
       <div class="courses-view-body">
-        <div class="courses-view-status-bar">
-          <p v-if="isLoggedIn && user" class="courses-view-role-info">
-            Logged in as: <strong>{{ isAdmin ? 'Administraator' : 'Kasutaja' }}</strong> ({{
-              user.name
-            }})
-          </p>
-          <p v-else class="courses-view-role-info">
-            <strong>Külalisvaade</strong> — logi sisse, et registreeruda.
-          </p>
-        </div>
-
         <!-- Filtrid -->
         <section class="freight-filter-section">
           <div class="freight-filter-row">
@@ -539,26 +551,6 @@ onMounted(() => {
             </button>
           </div>
         </section>
-
-        <div class="courses-view-pagination">
-          <button
-            @click="prevPage"
-            :disabled="activeTab.filter.page === 0"
-            class="courses-view-page-btn"
-          >
-            Last
-          </button>
-          <span class="courses-view-page-text">
-            Page {{ activeTab.filter.page + 1 }} / {{ activeTab.totalPages }}
-          </span>
-          <button
-            @click="nextPage"
-            :disabled="activeTab.filter.page >= activeTab.totalPages - 1"
-            class="courses-view-page-btn"
-          >
-            Next
-          </button>
-        </div>
 
         <div class="freight-table-wrap">
           <table class="freight-table">
@@ -710,6 +702,16 @@ onMounted(() => {
               </template>
             </tbody>
           </table>
+        </div>
+
+        <div ref="sentinelEl" class="freight-scroll-sentinel">
+          <span v-if="activeTab.loadingMore" class="freight-scroll-status">Loading more...</span>
+          <span
+            v-else-if="activeTab.courses.length > 0 && activeTab.filter.page + 1 >= activeTab.totalPages"
+            class="freight-scroll-status"
+          >
+            No more freight postings.
+          </span>
         </div>
       </div>
     </div>
@@ -943,6 +945,18 @@ onMounted(() => {
 
 .freight-table-wrap {
   overflow-x: auto;
+}
+
+.freight-scroll-sentinel {
+  display: flex;
+  justify-content: center;
+  padding: 18px 0 6px;
+  min-height: 20px;
+}
+
+.freight-scroll-status {
+  font-size: 0.82rem;
+  color: #999;
 }
 
 .freight-table {
