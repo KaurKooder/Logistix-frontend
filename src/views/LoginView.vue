@@ -8,6 +8,7 @@ const router = useRouter()
 const mode = ref('login')
 const name = ref('')
 const password = ref('')
+const company = ref('')
 const message = ref('')
 const role = ref('USER')
 const authState = ref(0)
@@ -83,7 +84,8 @@ const submit = async () => {
       // Kasutame api.js interceptorit, aga siin saame ka lisada kui vaja
       await apiClient.post(endpoint, {
         name: name.value,
-        password: password.value
+        password: password.value,
+        company: company.value || undefined
       })
 
       message.value = asAdmin ? 'Uus admin loodud!' : 'Kasutaja loodud! Võid sisse logida.'
@@ -91,7 +93,7 @@ const submit = async () => {
       if (!isLoggedIn.value) {
         setTimeout(() => { mode.value = 'login' }, 1500)
       }
-      name.value = ''; password.value = ''
+      name.value = ''; password.value = ''; company.value = ''
     }
   } catch (error) {
     message.value = error.response?.data?.message || 'Viga!'
@@ -155,6 +157,16 @@ const logout = () => {
                 type="password"
                 class="auth-view-input"
                 placeholder="******"
+              />
+            </div>
+
+            <div v-if="mode === 'register'" class="auth-view-field">
+              <label for="auth-company" class="auth-view-label">Ettevõte (valikuline)</label>
+              <input
+                id="auth-company"
+                v-model="company"
+                class="auth-view-input"
+                placeholder="Sinu ettevõtte nimi"
               />
             </div>
 

@@ -187,7 +187,12 @@ const countryTriggerText = computed(() => {
         <div v-if="countryOpen" class="clf-country-panel" @click.stop>
           <div class="clf-panel-list">
             <template v-if="mode === 'radius'">
-              <div v-if="allowEmptyCountry" class="clf-country-option" @click="selectCountrySingle('')">
+              <div
+                v-if="allowEmptyCountry"
+                class="clf-country-option"
+                :class="{ selected: !modelValue.country }"
+                @click="selectCountrySingle('')"
+              >
                 — None
               </div>
               <template v-for="g in filteredCountryGroups" :key="g.group">
@@ -196,6 +201,7 @@ const countryTriggerText = computed(() => {
                   v-for="c in g.options"
                   :key="c.code"
                   class="clf-country-option"
+                  :class="{ selected: c.code === modelValue.country }"
                   @click="selectCountrySingle(c.code)"
                 >
                   <strong>{{ c.code }}</strong> - {{ c.name }}
@@ -205,7 +211,12 @@ const countryTriggerText = computed(() => {
             <template v-else>
               <template v-for="g in filteredCountryGroups" :key="g.group">
                 <div class="clf-group-label">{{ g.group }}</div>
-                <label v-for="c in g.options" :key="c.code" class="clf-country-option clf-country-option-check">
+                <label
+                  v-for="c in g.options"
+                  :key="c.code"
+                  class="clf-country-option clf-country-option-check"
+                  :class="{ selected: isCountrySelectedMulti(c.code) }"
+                >
                   <input
                     type="checkbox"
                     class="clf-country-checkbox"
@@ -420,6 +431,15 @@ const countryTriggerText = computed(() => {
 
 .clf-country-option:hover {
   background: #f5f5f5;
+}
+
+.clf-country-option.selected {
+  background: #e8c491;
+  font-weight: 600;
+}
+
+.clf-country-option.selected:hover {
+  background: #e0b87d;
 }
 
 .clf-country-checkbox {
