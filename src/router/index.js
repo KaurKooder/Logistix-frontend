@@ -6,6 +6,7 @@ import Freight from "@/views/Freight.vue";
 import SingleBlogPostView from "@/views/SingleBlogPostView.vue";
 import CreatePost from "@/views/CreatePost.vue";
 import PostLoad from "@/views/PostLoad.vue";
+import PostTruck from "@/views/PostTruck.vue";
 import EShopAddProduct from "@/views/EShopAddProduct.vue";
 import CartView from "@/views/CartView.vue";
 import OrderView from "@/views/OrderView.vue";
@@ -80,6 +81,11 @@ const router = createRouter({
       path: '/post-load',
       name: 'PostLoad',
       component: PostLoad
+    },
+    {
+      path: '/post-truck',
+      name: 'PostTruck',
+      component: PostTruck
     }
   ],
 })
