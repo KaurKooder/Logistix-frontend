@@ -240,6 +240,29 @@ function formatPlace(country, location) {
   return location ? `${country}-${location}` : country
 }
 
+// How long ago a posting was created, e.g. "45 min", "2h>", "1 day 1h>".
+// Rounds UP to the next whole unit (hence the ">") so the label always reads
+// as "no older than X", never overstating the posting's age.
+function formatAge(createdAt) {
+  if (!createdAt) return '—'
+  const createdMs = new Date(createdAt).getTime()
+  if (Number.isNaN(createdMs)) return '—'
+
+  const diffMs = Date.now() - createdMs
+  const diffMin = Math.floor(diffMs / 60000)
+
+  if (diffMin < 1) return 'just now'
+  if (diffMin < 60) return `${diffMin} min`
+
+  const totalHours = Math.ceil(diffMin / 60)
+  if (totalHours < 24) return `${totalHours}h>`
+
+  const days = Math.floor(totalHours / 24)
+  const hours = totalHours % 24
+  const dayLabel = `${days} day${days > 1 ? 's' : ''}`
+  return hours > 0 ? `${dayLabel} ${hours}h>` : `${dayLabel}>`
+}
+
 function formatLength(len) {
   return len != null && len !== '' ? `${len} m` : ''
 }
@@ -542,6 +565,7 @@ onMounted(() => {
             <thead>
               <tr>
                 <th class="freight-col-arrow"></th>
+                <th>Age</th>
                 <th class="sortable" @click="toggleSort(activeTab, 'startDate')">
                   Date
                   <span v-if="activeTab.filter.sortBy === 'startDate'" class="sort-arrow">{{
@@ -549,6 +573,7 @@ onMounted(() => {
                   }}</span>
                 </th>
                 <th>Trip</th>
+                <th>KM</th>
                 <th class="sortable" @click="toggleSort(activeTab, 'price')">
                   Price
                   <span v-if="activeTab.filter.sortBy === 'price'" class="sort-arrow">{{
@@ -562,7 +587,7 @@ onMounted(() => {
             <tbody>
               <template v-if="activeTab.courses.length === 0">
                 <tr>
-                  <td colspan="6" class="freight-empty-row">No freight postings found.</td>
+                  <td colspan="8" class="freight-empty-row">No freight postings found.</td>
                 </tr>
               </template>
               <template v-for="c in activeTab.courses" :key="c.id">
@@ -572,6 +597,7 @@ onMounted(() => {
                   @click="toggleRow(activeTab, c.id)"
                 >
                   <td class="freight-col-arrow">{{ activeTab.expandedId === c.id ? '▼' : '▶' }}</td>
+                  <td class="freight-row-age">{{ formatAge(c.createdAt) }}</td>
                   <td>
                     <div class="freight-date-block">
                       <span class="freight-date-connector"></span>
@@ -587,6 +613,7 @@ onMounted(() => {
                     <div class="freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.fromCountry, c.fromLocation) }}</div>
                     <div class="freight-row-sub freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.toCountry, c.toLocation) }}</div>
                   </td>
+                  <td class="freight-row-km">-</td>
                   <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
                   <td class="freight-row-desc">
                     <div v-if="c.length">{{ formatLength(c.length) }}</div>
@@ -597,7 +624,7 @@ onMounted(() => {
                 </tr>
 
                 <tr v-if="activeTab.expandedId === c.id" class="freight-detail-row">
-                  <td colspan="6">
+                  <td colspan="8">
                     <div class="freight-detail-panel">
                       <div class="freight-detail-grid">
                         <div class="freight-detail-route">
@@ -887,6 +914,17 @@ onMounted(() => {
   padding-right: 28px;
 }
 
+/* Hide number input spinners - typing only, no up/down arrows */
+.unit-input::-webkit-outer-spin-button,
+.unit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.unit-input {
+  -moz-appearance: textfield;
+}
+
 .unit-suffix {
   position: absolute;
   right: 8px;
@@ -974,6 +1012,16 @@ onMounted(() => {
   font-weight: 700;
   color: #b55a30;
   white-space: nowrap;
+}
+
+.freight-row-age {
+  font-size: 0.8rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.freight-row-km {
+  color: #999;
 }
 
 .freight-row-desc {

@@ -36,6 +36,9 @@ const open = ref(false)
 const rootEl = ref(null)
 const searchInput = ref(null)
 const search = ref('')
+// Snapshot of the selection taken when the panel opens, so Cancel can revert
+// edits made while it was open (checkbox toggles apply live to modelValue).
+let openSnapshot = null
 
 const isGrouped = computed(
   () =>
@@ -87,7 +90,6 @@ function toggleOption(option) {
     emit('update:modelValue', current)
   } else {
     emit('update:modelValue', props.modelValue === option ? '' : option)
-    open.value = false
   }
 }
 
@@ -99,12 +101,24 @@ function clearSelection(e) {
 function toggleOpen() {
   open.value = !open.value
   if (open.value) {
+    openSnapshot = props.multiple
+      ? Array.isArray(props.modelValue)
+        ? [...props.modelValue]
+        : []
+      : props.modelValue
     search.value = ''
     nextTick(() => searchInput.value?.focus())
   }
 }
 
-function closePanel() {
+function confirmPanel() {
+  open.value = false
+}
+
+function cancelPanel() {
+  if (openSnapshot !== null) {
+    emit('update:modelValue', props.multiple ? [...openSnapshot] : openSnapshot)
+  }
   open.value = false
 }
 
@@ -146,21 +160,27 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocumentClick))
       <span class="cd-arrow" @click.stop="toggleOpen">{{ open ? '▲' : '▼' }}</span>
     </div>
 
-    <div v-if="open" class="cd-backdrop" @click="closePanel"></div>
+    <div v-if="open" class="cd-backdrop" @click="confirmPanel"></div>
     <div v-if="open" class="cd-panel" @click.stop>
-      <div v-if="!hasResults" class="cd-no-results">No matches</div>
-      <template v-for="(g, gi) in filteredGroups" :key="gi">
-        <div v-if="g.group" class="cd-group-label">{{ g.group }}</div>
-        <label v-for="option in g.options" :key="option" class="cd-option">
-          <input
-            type="checkbox"
-            class="cd-checkbox"
-            :checked="isChecked(option)"
-            @change="toggleOption(option)"
-          />
-          <span>{{ option }}</span>
-        </label>
-      </template>
+      <div class="cd-panel-list">
+        <div v-if="!hasResults" class="cd-no-results">No matches</div>
+        <template v-for="(g, gi) in filteredGroups" :key="gi">
+          <div v-if="g.group" class="cd-group-label">{{ g.group }}</div>
+          <label v-for="option in g.options" :key="option" class="cd-option">
+            <input
+              type="checkbox"
+              class="cd-checkbox"
+              :checked="isChecked(option)"
+              @change="toggleOption(option)"
+            />
+            <span>{{ option }}</span>
+          </label>
+        </template>
+      </div>
+      <div class="cd-panel-actions">
+        <button type="button" class="cd-cancel-btn" @click="cancelPanel">Cancel</button>
+        <button type="button" class="cd-ok-btn" @click="confirmPanel">OK</button>
+      </div>
     </div>
   </div>
 </template>
@@ -263,11 +283,54 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocumentClick))
   border: 1px solid #ddd;
   border-radius: 6px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-  overflow-y: auto;
   padding: 10px;
   display: flex;
   flex-direction: column;
+}
+
+.cd-panel-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
+}
+
+.cd-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  flex-shrink: 0;
+}
+
+.cd-cancel-btn,
+.cd-ok-btn {
+  flex: 1;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.cd-cancel-btn {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.cd-cancel-btn:hover {
+  background: #e2e2e2;
+}
+
+.cd-ok-btn {
+  background: #d4a76a;
+  color: #1a1a1a;
+}
+
+.cd-ok-btn:hover {
+  background: #b88f55;
 }
 
 .cd-no-results {

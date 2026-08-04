@@ -36,6 +36,9 @@ const viewMonth = ref(initialDate.getMonth())
 // mode/selection that was already made.
 const open = ref(false)
 const rootEl = ref(null)
+// Snapshot taken whenever the panel opens, so Cancel can revert edits made
+// while it was open (day clicks apply live to modelValue).
+let openSnapshot = null
 
 function onDocumentClick(e) {
   if (rootEl.value && !rootEl.value.contains(e.target)) {
@@ -98,6 +101,7 @@ function nextMonth() {
 }
 
 function setMode(newMode) {
+  openSnapshot = { ...props.modelValue }
   if (props.modelValue.mode === newMode) {
     // Already the active mode - just re-open the panel to edit the existing selection.
     open.value = true
@@ -108,7 +112,19 @@ function setMode(newMode) {
   open.value = true
 }
 
+function reopenPanel() {
+  openSnapshot = { ...props.modelValue }
+  open.value = true
+}
+
 function confirmSelection() {
+  open.value = false
+}
+
+function cancelSelection() {
+  if (openSnapshot) {
+    emit('update:modelValue', { ...openSnapshot })
+  }
   open.value = false
 }
 
@@ -201,7 +217,7 @@ function dayClasses(day) {
             <span>Period</span>
           </div>
         </div>
-        <span v-if="!open && summaryText" class="ldp-summary" @click="open = true">{{
+        <span v-if="!open && summaryText" class="ldp-summary" @click="reopenPanel">{{
           summaryText
         }}</span>
       </div>
@@ -228,7 +244,10 @@ function dayClasses(day) {
           {{ day || '' }}
         </span>
       </div>
-      <button type="button" class="ldp-ok-btn" @click="confirmSelection">OK</button>
+      <div class="ldp-actions">
+        <button type="button" class="ldp-cancel-btn" @click="cancelSelection">Cancel</button>
+        <button type="button" class="ldp-ok-btn" @click="confirmSelection">OK</button>
+      </div>
     </div>
   </div>
 </template>
@@ -427,17 +446,35 @@ function dayClasses(day) {
   font-weight: 600;
 }
 
-.ldp-ok-btn {
-  width: 100%;
+.ldp-actions {
+  display: flex;
+  gap: 8px;
   margin-top: 8px;
-  background: #d4a76a;
-  color: #1a1a1a;
+}
+
+.ldp-cancel-btn,
+.ldp-ok-btn {
+  flex: 1;
   border: none;
   padding: 8px;
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
   font-size: 0.85rem;
+}
+
+.ldp-cancel-btn {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.ldp-cancel-btn:hover {
+  background: #e2e2e2;
+}
+
+.ldp-ok-btn {
+  background: #d4a76a;
+  color: #1a1a1a;
 }
 
 .ldp-ok-btn:hover {

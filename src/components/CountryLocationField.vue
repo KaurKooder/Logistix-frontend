@@ -60,16 +60,31 @@ const countryOpen = ref(false)
 const countryWrapEl = ref(null)
 const countrySearchInput = ref(null)
 const countrySearch = ref('')
+// Snapshot of country/countries taken when the panel opens, so Cancel can
+// revert edits made while it was open.
+let countrySnapshot = null
 
 function toggleCountryOpen() {
   countryOpen.value = !countryOpen.value
   if (countryOpen.value) {
+    countrySnapshot = { country: props.modelValue.country, countries: props.modelValue.countries }
     countrySearch.value = ''
     nextTick(() => countrySearchInput.value?.focus())
   }
 }
 
-function closeCountryPanel() {
+function confirmCountryPanel() {
+  countryOpen.value = false
+}
+
+function cancelCountryPanel() {
+  if (countrySnapshot) {
+    emit('update:modelValue', {
+      ...props.modelValue,
+      country: countrySnapshot.country,
+      countries: Array.isArray(countrySnapshot.countries) ? [...countrySnapshot.countries] : [],
+    })
+  }
   countryOpen.value = false
 }
 
@@ -98,7 +113,6 @@ const filteredCountryGroups = computed(() => {
 
 function selectCountrySingle(code) {
   emit('update:modelValue', { ...props.modelValue, country: code })
-  closeCountryPanel()
 }
 
 function isCountrySelectedMulti(code) {
@@ -148,7 +162,11 @@ const countryTriggerText = computed(() => {
     </div>
 
     <div class="clf-group">
-      <div ref="countryWrapEl" class="clf-country-wrap">
+      <div
+        ref="countryWrapEl"
+        class="clf-country-wrap"
+        :class="{ 'clf-country-wrap-full': mode === 'countries' }"
+      >
         <div class="clf-country-trigger" @click="!countryOpen && toggleCountryOpen()">
           <input
             v-if="countryOpen"
@@ -165,39 +183,44 @@ const countryTriggerText = computed(() => {
           }}</span>
         </div>
 
-        <div v-if="countryOpen" class="clf-backdrop" @click="closeCountryPanel"></div>
+        <div v-if="countryOpen" class="clf-backdrop" @click="confirmCountryPanel"></div>
         <div v-if="countryOpen" class="clf-country-panel" @click.stop>
-          <template v-if="mode === 'radius'">
-            <div v-if="allowEmptyCountry" class="clf-country-option" @click="selectCountrySingle('')">
-              — None
-            </div>
-            <template v-for="g in filteredCountryGroups" :key="g.group">
-              <div class="clf-group-label">{{ g.group }}</div>
-              <div
-                v-for="c in g.options"
-                :key="c.code"
-                class="clf-country-option"
-                @click="selectCountrySingle(c.code)"
-              >
-                <strong>{{ c.code }}</strong> - {{ c.name }}
+          <div class="clf-panel-list">
+            <template v-if="mode === 'radius'">
+              <div v-if="allowEmptyCountry" class="clf-country-option" @click="selectCountrySingle('')">
+                — None
               </div>
+              <template v-for="g in filteredCountryGroups" :key="g.group">
+                <div class="clf-group-label">{{ g.group }}</div>
+                <div
+                  v-for="c in g.options"
+                  :key="c.code"
+                  class="clf-country-option"
+                  @click="selectCountrySingle(c.code)"
+                >
+                  <strong>{{ c.code }}</strong> - {{ c.name }}
+                </div>
+              </template>
             </template>
-          </template>
-          <template v-else>
-            <template v-for="g in filteredCountryGroups" :key="g.group">
-              <div class="clf-group-label">{{ g.group }}</div>
-              <label v-for="c in g.options" :key="c.code" class="clf-country-option clf-country-option-check">
-                <input
-                  type="checkbox"
-                  class="clf-country-checkbox"
-                  :checked="isCountrySelectedMulti(c.code)"
-                  @change="toggleCountryMulti(c.code)"
-                />
-                <span><strong>{{ c.code }}</strong> - {{ c.name }}</span>
-              </label>
+            <template v-else>
+              <template v-for="g in filteredCountryGroups" :key="g.group">
+                <div class="clf-group-label">{{ g.group }}</div>
+                <label v-for="c in g.options" :key="c.code" class="clf-country-option clf-country-option-check">
+                  <input
+                    type="checkbox"
+                    class="clf-country-checkbox"
+                    :checked="isCountrySelectedMulti(c.code)"
+                    @change="toggleCountryMulti(c.code)"
+                  />
+                  <span><strong>{{ c.code }}</strong> - {{ c.name }}</span>
+                </label>
+              </template>
             </template>
-            <button type="button" class="clf-country-done-btn" @click="closeCountryPanel">Done</button>
-          </template>
+          </div>
+          <div class="clf-panel-actions">
+            <button type="button" class="clf-cancel-btn" @click="cancelCountryPanel">Cancel</button>
+            <button type="button" class="clf-ok-btn" @click="confirmCountryPanel">OK</button>
+          </div>
         </div>
       </div>
 
@@ -280,6 +303,10 @@ const countryTriggerText = computed(() => {
   min-width: 0;
 }
 
+.clf-country-wrap-full {
+  flex: 1 1 auto;
+}
+
 .clf-country-trigger {
   display: flex;
   align-items: center;
@@ -345,11 +372,25 @@ const countryTriggerText = computed(() => {
   border: 1px solid #ddd;
   border-radius: 6px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-  overflow-y: auto;
   padding: 10px;
   display: flex;
   flex-direction: column;
+}
+
+.clf-panel-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
+}
+
+.clf-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+  flex-shrink: 0;
 }
 
 .clf-group-label {
@@ -388,10 +429,9 @@ const countryTriggerText = computed(() => {
   accent-color: #d4a76a;
 }
 
-.clf-country-done-btn {
-  margin-top: 8px;
-  background: #d4a76a;
-  color: #1a1a1a;
+.clf-cancel-btn,
+.clf-ok-btn {
+  flex: 1;
   border: none;
   padding: 8px;
   border-radius: 4px;
@@ -400,7 +440,21 @@ const countryTriggerText = computed(() => {
   font-size: 0.85rem;
 }
 
-.clf-country-done-btn:hover {
+.clf-cancel-btn {
+  background: #f0f0f0;
+  color: #555;
+}
+
+.clf-cancel-btn:hover {
+  background: #e2e2e2;
+}
+
+.clf-ok-btn {
+  background: #d4a76a;
+  color: #1a1a1a;
+}
+
+.clf-ok-btn:hover {
   background: #b88f55;
 }
 
