@@ -703,9 +703,9 @@ onUnmounted(() => {
 
                   <div class="freight-detail-col">
                     <h4>Truck type</h4>
-                    <p>{{ selectedCourse.vehicleType || '—' }}</p>
+                    <p>{{ selectedCourse.vehicleType?.length ? selectedCourse.vehicleType.join(', ') : '—' }}</p>
                     <h4>Body type</h4>
-                    <p>{{ selectedCourse.bodyType || '—' }}</p>
+                    <p>{{ selectedCourse.bodyType?.length ? selectedCourse.bodyType.join(', ') : '—' }}</p>
                     <template v-if="selectedCourse.bodyCharacteristics?.length">
                       <h4>Characteristics</h4>
                       <p>{{ selectedCourse.bodyCharacteristics.join(', ') }}</p>
