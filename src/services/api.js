@@ -4,6 +4,12 @@ const apiClient = axios.create({
   baseURL: '/api',
   headers: {
     'Content-Type': 'application/json'
+  },
+  // Serialize array query params as repeated keys (vehicleTypes=A&vehicleTypes=B)
+  // instead of axios' default vehicleTypes[]=A&vehicleTypes[]=B, since that's what
+  // Spring's default List<String>/List<LocalDate> query binding expects.
+  paramsSerializer: {
+    indexes: null
   }
 });
 
