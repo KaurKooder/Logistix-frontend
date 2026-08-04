@@ -240,7 +240,17 @@ function toggleSort(tab, field) {
 
 function toggleRow(tab, id) {
   tab.expandedId = tab.expandedId === id ? null : id
+  // Switching to a different posting (or closing one) always jumps back to Info.
+  detailTab.value = 'info'
 }
+
+// The posting currently shown in the detail sidebar (null when nothing selected).
+const selectedCourse = computed(() => {
+  return activeTab.value.courses.find((c) => c.id === activeTab.value.expandedId) || null
+})
+
+// Which sub-tab (Info / Map / Calculate) the detail sidebar is showing.
+const detailTab = ref('info')
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -305,10 +315,6 @@ async function unregister(courseId) {
   } catch (error) {
     console.error(error)
   }
-}
-
-function goToAddCourse() {
-  router.push('/courses/add')
 }
 
 // --- Infinite scroll: a sentinel div sits right after the results table.
@@ -399,12 +405,6 @@ onUnmounted(() => {
         </div>
         <button @click="addNewTab" class="tab-add-btn" title="Ava uus otsinguaken">+</button>
       </div>
-
-      <header v-if="isAdmin" class="courses-view-header-section">
-        <button @click="goToAddCourse" class="courses-view-add-btn">
-          + Add freight
-        </button>
-      </header>
 
       <div class="courses-view-body">
         <!-- Filtrid -->
@@ -552,166 +552,240 @@ onUnmounted(() => {
           </div>
         </section>
 
-        <div class="freight-table-wrap">
-          <table class="freight-table">
-            <thead>
-              <tr>
-                <th class="freight-col-arrow"></th>
-                <th>Age</th>
-                <th class="sortable" @click="toggleSort(activeTab, 'startDate')">
-                  Date
-                  <span v-if="activeTab.filter.sortBy === 'startDate'" class="sort-arrow">{{
-                    activeTab.filter.sortDir === 'asc' ? '▲' : '▼'
-                  }}</span>
-                </th>
-                <th>Trip</th>
-                <th>KM</th>
-                <th class="sortable" @click="toggleSort(activeTab, 'price')">
-                  Price
-                  <span v-if="activeTab.filter.sortBy === 'price'" class="sort-arrow">{{
-                    activeTab.filter.sortDir === 'asc' ? '▲' : '▼'
-                  }}</span>
-                </th>
-                <th>Description</th>
-                <th>Company</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-if="activeTab.courses.length === 0">
-                <tr>
-                  <td colspan="8" class="freight-empty-row">No freight postings found.</td>
-                </tr>
-              </template>
-              <template v-for="c in activeTab.courses" :key="c.id">
-                <tr
-                  class="freight-row"
-                  :class="{ expanded: activeTab.expandedId === c.id }"
-                  @click="toggleRow(activeTab, c.id)"
+        <div class="freight-results-layout">
+          <div class="freight-list-col">
+            <div class="freight-table-wrap">
+              <table class="freight-table">
+                <thead>
+                  <tr>
+                    <th class="freight-col-arrow"></th>
+                    <th>Age</th>
+                    <th class="sortable" @click="toggleSort(activeTab, 'startDate')">
+                      Date
+                      <span v-if="activeTab.filter.sortBy === 'startDate'" class="sort-arrow">{{
+                        activeTab.filter.sortDir === 'asc' ? '▲' : '▼'
+                      }}</span>
+                    </th>
+                    <th>Trip</th>
+                    <th>KM</th>
+                    <th class="sortable" @click="toggleSort(activeTab, 'price')">
+                      Price
+                      <span v-if="activeTab.filter.sortBy === 'price'" class="sort-arrow">{{
+                        activeTab.filter.sortDir === 'asc' ? '▲' : '▼'
+                      }}</span>
+                    </th>
+                    <th>Description</th>
+                    <th>Company</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-if="activeTab.courses.length === 0">
+                    <tr>
+                      <td colspan="8" class="freight-empty-row">No freight postings found.</td>
+                    </tr>
+                  </template>
+                  <tr
+                    v-for="c in activeTab.courses"
+                    :key="c.id"
+                    class="freight-row"
+                    :class="{ expanded: activeTab.expandedId === c.id }"
+                    @click="toggleRow(activeTab, c.id)"
+                  >
+                    <td class="freight-col-arrow">{{ activeTab.expandedId === c.id ? '▼' : '▶' }}</td>
+                    <td class="freight-row-age">{{ formatAge(c.createdAt) }}</td>
+                    <td>
+                      <div class="freight-date-block">
+                        <span class="freight-date-connector"></span>
+                        <div class="freight-date-text">
+                          <div>{{ formatDate(c.startDate) || 'Määramata' }}</div>
+                          <div v-if="c.endDate && c.endDate !== c.startDate" class="freight-row-sub">
+                            {{ formatDate(c.endDate) }}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.fromCountry, c.fromLocation) }}</div>
+                      <div class="freight-row-sub freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.toCountry, c.toLocation) }}</div>
+                    </td>
+                    <td class="freight-row-km">-</td>
+                    <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
+                    <td class="freight-row-desc">
+                      <div v-if="c.length">{{ formatLength(c.length) }}</div>
+                      <div v-if="c.weight">{{ formatWeight(c.weight) }}</div>
+                      <div>{{ c.description || c.mayContain?.[0] || '—' }}</div>
+                    </td>
+                    <td>{{ c.company || '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div ref="sentinelEl" class="freight-scroll-sentinel">
+              <span v-if="activeTab.loadingMore" class="freight-scroll-status">Loading more...</span>
+              <span
+                v-else-if="activeTab.courses.length > 0 && activeTab.filter.page + 1 >= activeTab.totalPages"
+                class="freight-scroll-status"
+              >
+                No more freight postings.
+              </span>
+            </div>
+          </div>
+
+          <aside class="freight-detail-sidebar">
+            <div v-if="selectedCourse" class="freight-detail-panel">
+              <div class="freight-detail-tabs">
+                <button
+                  type="button"
+                  class="freight-detail-tab-btn"
+                  :class="{ active: detailTab === 'info' }"
+                  @click="detailTab = 'info'"
                 >
-                  <td class="freight-col-arrow">{{ activeTab.expandedId === c.id ? '▼' : '▶' }}</td>
-                  <td class="freight-row-age">{{ formatAge(c.createdAt) }}</td>
-                  <td>
-                    <div class="freight-date-block">
-                      <span class="freight-date-connector"></span>
-                      <div class="freight-date-text">
-                        <div>{{ formatDate(c.startDate) || 'Määramata' }}</div>
-                        <div v-if="c.endDate && c.endDate !== c.startDate" class="freight-row-sub">
-                          {{ formatDate(c.endDate) }}
+                  Info
+                </button>
+                <button
+                  type="button"
+                  class="freight-detail-tab-btn"
+                  :class="{ active: detailTab === 'map' }"
+                  @click="detailTab = 'map'"
+                >
+                  Map
+                </button>
+                <button
+                  type="button"
+                  class="freight-detail-tab-btn"
+                  :class="{ active: detailTab === 'calculate' }"
+                  @click="detailTab = 'calculate'"
+                >
+                  Calculate
+                </button>
+              </div>
+
+              <template v-if="detailTab === 'info'">
+                <div class="freight-detail-grid">
+                  <div class="freight-detail-route">
+                    <div class="freight-detail-stop">
+                      <span class="freight-detail-marker load"></span>
+                      <div>
+                        <div class="freight-detail-place">
+                          {{ formatPlace(selectedCourse.fromCountry, selectedCourse.fromLocation) }}
+                        </div>
+                        <div class="freight-detail-date">
+                          {{ formatDate(selectedCourse.startDate) || 'Määramata' }}
                         </div>
                       </div>
                     </div>
-                  </td>
-                  <td>
-                    <div class="freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.fromCountry, c.fromLocation) }}</div>
-                    <div class="freight-row-sub freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.toCountry, c.toLocation) }}</div>
-                  </td>
-                  <td class="freight-row-km">-</td>
-                  <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
-                  <td class="freight-row-desc">
-                    <div v-if="c.length">{{ formatLength(c.length) }}</div>
-                    <div v-if="c.weight">{{ formatWeight(c.weight) }}</div>
-                    <div>{{ c.description || c.mayContain?.[0] || '—' }}</div>
-                  </td>
-                  <td>{{ c.company || '—' }}</td>
-                </tr>
-
-                <tr v-if="activeTab.expandedId === c.id" class="freight-detail-row">
-                  <td colspan="8">
-                    <div class="freight-detail-panel">
-                      <div class="freight-detail-grid">
-                        <div class="freight-detail-route">
-                          <div class="freight-detail-stop">
-                            <span class="freight-detail-marker load"></span>
-                            <div>
-                              <div class="freight-detail-place">
-                                {{ formatPlace(c.fromCountry, c.fromLocation) }}
-                              </div>
-                              <div class="freight-detail-date">
-                                {{ formatDate(c.startDate) || 'Määramata' }}
-                              </div>
-                            </div>
-                          </div>
-                          <div class="freight-detail-stop">
-                            <span class="freight-detail-marker unload"></span>
-                            <div>
-                              <div class="freight-detail-place">
-                                {{ formatPlace(c.toCountry, c.toLocation) }}
-                              </div>
-                              <div class="freight-detail-date">
-                                {{ formatDate(c.endDate) || 'Määramata' }}
-                              </div>
-                            </div>
-                          </div>
-                          <div class="freight-detail-price-block">
-                            <span class="freight-detail-price">{{ c.price != null ? c.price + ' €' : '—' }}</span>
-                          </div>
+                    <div class="freight-detail-stop">
+                      <span class="freight-detail-marker unload"></span>
+                      <div>
+                        <div class="freight-detail-place">
+                          {{ formatPlace(selectedCourse.toCountry, selectedCourse.toLocation) }}
                         </div>
-
-                        <div class="freight-detail-col">
-                          <h4>Description</h4>
-                          <p v-if="c.weight">Load: {{ c.weight }} kg</p>
-                          <p v-if="c.length">Length: {{ c.length }} m</p>
-                          <p>{{ c.description || '—' }}</p>
-                          <p v-if="c.mayContain?.length">
-                            <strong>May contain:</strong> {{ c.mayContain.join(', ') }}
-                          </p>
-                          <p v-if="c.mayNotContain?.length">
-                            <strong>May not contain:</strong> {{ c.mayNotContain.join(', ') }}
-                          </p>
-                        </div>
-
-                        <div class="freight-detail-col">
-                          <h4>Truck type</h4>
-                          <p>{{ c.vehicleType || '—' }}</p>
-                          <h4>Body type</h4>
-                          <p>{{ c.bodyType || '—' }}</p>
-                          <template v-if="c.bodyCharacteristics?.length">
-                            <h4>Characteristics</h4>
-                            <p>{{ c.bodyCharacteristics.join(', ') }}</p>
-                          </template>
-                        </div>
-                      </div>
-
-                      <div class="freight-detail-footer">
-                        <span v-if="c.name" class="freight-detail-ref">{{ c.name }}</span>
-                        <div class="freight-detail-actions">
-                          <template v-if="isLoggedIn && !isAdmin">
-                            <button
-                              v-if="!c.registered"
-                              @click.stop="register(c.id)"
-                              class="courses-view-reg-btn"
-                            >
-                              Registreeru
-                            </button>
-                            <button
-                              v-else
-                              @click.stop="unregister(c.id)"
-                              class="courses-view-unreg-btn"
-                            >
-                              Tühista registreerimine
-                            </button>
-                          </template>
-                          <span v-if="!isLoggedIn" class="courses-view-guest-hint">
-                            <em>Logi sisse registreerumiseks</em>
-                          </span>
+                        <div class="freight-detail-date">
+                          {{ formatDate(selectedCourse.endDate) || 'Määramata' }}
                         </div>
                       </div>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+
+                  <div class="freight-detail-col">
+                    <h4>Description</h4>
+                    <p v-if="selectedCourse.weight">Load: {{ selectedCourse.weight }} kg</p>
+                    <p v-if="selectedCourse.length">Length: {{ selectedCourse.length }} m</p>
+                    <p>{{ selectedCourse.description || '—' }}</p>
+                    <p v-if="selectedCourse.mayContain?.length">
+                      <strong>May contain:</strong> {{ selectedCourse.mayContain.join(', ') }}
+                    </p>
+                    <p v-if="selectedCourse.mayNotContain?.length">
+                      <strong>May not contain:</strong> {{ selectedCourse.mayNotContain.join(', ') }}
+                    </p>
+                  </div>
+
+                  <div class="freight-detail-col">
+                    <h4>Truck type</h4>
+                    <p>{{ selectedCourse.vehicleType || '—' }}</p>
+                    <h4>Body type</h4>
+                    <p>{{ selectedCourse.bodyType || '—' }}</p>
+                    <template v-if="selectedCourse.bodyCharacteristics?.length">
+                      <h4>Characteristics</h4>
+                      <p>{{ selectedCourse.bodyCharacteristics.join(', ') }}</p>
+                    </template>
+                  </div>
+                </div>
+
+                <div class="freight-detail-price-row">
+                  <span class="freight-detail-price-label">Price</span>
+                  <span class="freight-detail-price">{{
+                    selectedCourse.price != null ? selectedCourse.price + ' €' : '—'
+                  }}</span>
+                </div>
+
+                <div class="freight-detail-footer">
+                  <span v-if="selectedCourse.name" class="freight-detail-ref">{{ selectedCourse.name }}</span>
+                  <div class="freight-detail-actions">
+                    <template v-if="isLoggedIn && !isAdmin">
+                      <button
+                        v-if="!selectedCourse.registered"
+                        @click.stop="register(selectedCourse.id)"
+                        class="courses-view-reg-btn"
+                      >
+                        Registreeru
+                      </button>
+                      <button
+                        v-else
+                        @click.stop="unregister(selectedCourse.id)"
+                        class="courses-view-unreg-btn"
+                      >
+                        Tühista registreerimine
+                      </button>
+                    </template>
+                    <span v-if="!isLoggedIn" class="courses-view-guest-hint">
+                      <em>Logi sisse registreerumiseks</em>
+                    </span>
+                  </div>
+                </div>
               </template>
-            </tbody>
-          </table>
-        </div>
 
-        <div ref="sentinelEl" class="freight-scroll-sentinel">
-          <span v-if="activeTab.loadingMore" class="freight-scroll-status">Loading more...</span>
-          <span
-            v-else-if="activeTab.courses.length > 0 && activeTab.filter.page + 1 >= activeTab.totalPages"
-            class="freight-scroll-status"
-          >
-            No more freight postings.
-          </span>
+              <template v-else-if="detailTab === 'map'">
+                <div class="freight-detail-route">
+                  <div class="freight-detail-stop">
+                    <span class="freight-detail-marker load"></span>
+                    <div>
+                      <div class="freight-detail-place">
+                        {{ formatPlace(selectedCourse.fromCountry, selectedCourse.fromLocation) }}
+                      </div>
+                      <div class="freight-detail-date">
+                        {{ formatDate(selectedCourse.startDate) || 'Määramata' }}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="freight-detail-stop">
+                    <span class="freight-detail-marker unload"></span>
+                    <div>
+                      <div class="freight-detail-place">
+                        {{ formatPlace(selectedCourse.toCountry, selectedCourse.toLocation) }}
+                      </div>
+                      <div class="freight-detail-date">
+                        {{ formatDate(selectedCourse.endDate) || 'Määramata' }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="freight-map-placeholder">Map view coming soon</div>
+              </template>
+
+              <template v-else>
+                <div class="freight-calculate-placeholder">
+                  Cost calculator coming soon — this will estimate what this route
+                  should cost using your own rates.
+                </div>
+              </template>
+            </div>
+            <div v-else class="freight-detail-placeholder">
+              Vali pakkumine, et näha detaile.
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -943,6 +1017,32 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
+.freight-results-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.freight-list-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.freight-detail-sidebar {
+  flex: 0 0 380px;
+  position: sticky;
+  top: 20px;
+}
+
+.freight-detail-placeholder {
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #999;
+  font-size: 0.88rem;
+}
+
 .freight-table-wrap {
   overflow-x: auto;
 }
@@ -1083,21 +1183,84 @@ onUnmounted(() => {
   color: #999;
 }
 
-.freight-detail-row td {
-  padding: 0;
-  border-bottom: 1px solid #eee;
-}
-
 .freight-detail-panel {
   background: #fdfcf9;
   padding: 20px 24px;
   border-left: 3px solid #d4a76a;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.freight-detail-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.freight-detail-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  margin-right: 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+  cursor: pointer;
+}
+
+.freight-detail-tab-btn:hover {
+  color: #b55a30;
+}
+
+.freight-detail-tab-btn.active {
+  color: #b55a30;
+  border-bottom-color: #d4a76a;
+}
+
+.freight-detail-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.freight-detail-price-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #b55a30;
+}
+
+.freight-map-placeholder {
+  margin-top: 20px;
+  height: 220px;
+  border: 1px dashed #ddd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 0.85rem;
+  background: #fafafa;
+}
+
+.freight-calculate-placeholder {
+  padding: 30px 10px;
+  text-align: center;
+  color: #999;
+  font-size: 0.88rem;
 }
 
 .freight-detail-grid {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: 1fr;
+  gap: 20px;
 }
 
 .freight-detail-route {
@@ -1136,10 +1299,6 @@ onUnmounted(() => {
 .freight-detail-date {
   font-size: 0.85rem;
   color: #888;
-}
-
-.freight-detail-price-block {
-  margin-top: 4px;
 }
 
 .freight-detail-price {
@@ -1188,9 +1347,15 @@ onUnmounted(() => {
   padding: 8px 20px;
 }
 
-@media (max-width: 800px) {
-  .freight-detail-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 900px) {
+  .freight-results-layout {
+    flex-direction: column;
+  }
+
+  .freight-detail-sidebar {
+    flex: 1 1 auto;
+    width: 100%;
+    position: static;
   }
 }
 </style>
