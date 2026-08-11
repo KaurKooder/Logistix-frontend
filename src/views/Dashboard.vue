@@ -2,7 +2,7 @@
 const primaryActions = [
   { label: 'Search loads', icon: '📦', path: '/courses?tab=browse' },
   { label: 'Post a load', icon: '➕', path: '/post-load' },
-  { label: 'Search trucks', icon: '🚛', path: '/courses?tab=trucks' },
+  { label: 'Search trucks', icon: '🚛', path: '/search-trucks' },
   { label: 'Post a truck', icon: '🚚', path: '/post-truck' },
 ]
 
