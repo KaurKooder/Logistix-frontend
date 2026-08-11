@@ -5,6 +5,7 @@ import apiClient from '@/services/api'
 import CountryLocationField from '@/components/CountryLocationField.vue'
 import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
 import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
+import RouteMap from '@/components/RouteMap.vue'
 import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
 import { bodyCharacteristics } from '@/data/bodyCharacteristics'
@@ -251,6 +252,14 @@ const selectedCourse = computed(() => {
 
 // Which sub-tab (Info / Map / Calculate) the detail sidebar is showing.
 const detailTab = ref('info')
+
+// Distance (km) fetched from the route endpoint, keyed by freight id - filled in lazily
+// as the Map tab is opened for a posting, so the search list never has to fetch routes in bulk.
+const courseDistances = ref({})
+
+function formatKm(km) {
+  return km != null ? `${Math.round(km)} km` : '-'
+}
 
 function formatDate(iso) {
   if (!iso) return ''
@@ -608,7 +617,7 @@ onUnmounted(() => {
                       <div class="freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.fromCountry, c.fromLocation) }}</div>
                       <div class="freight-row-sub freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.toCountry, c.toLocation) }}</div>
                     </td>
-                    <td class="freight-row-km">-</td>
+                    <td class="freight-row-km">{{ formatKm(courseDistances[c.id] ?? c.distanceKm) }}</td>
                     <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
                     <td class="freight-row-desc">
                       <div v-if="c.length">{{ formatLength(c.length) }}</div>
@@ -772,7 +781,11 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <div class="freight-map-placeholder">Map view coming soon</div>
+                <RouteMap
+                  :key="selectedCourse.id"
+                  :route-url="`/courses/${selectedCourse.id}/route`"
+                  @distance-loaded="(km) => (courseDistances[selectedCourse.id] = km)"
+                />
               </template>
 
               <template v-else>
@@ -1235,19 +1248,6 @@ onUnmounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   color: #b55a30;
-}
-
-.freight-map-placeholder {
-  margin-top: 20px;
-  height: 220px;
-  border: 1px dashed #ddd;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #999;
-  font-size: 0.85rem;
-  background: #fafafa;
 }
 
 .freight-calculate-placeholder {

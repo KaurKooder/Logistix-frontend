@@ -5,6 +5,7 @@ import apiClient from '@/services/api'
 import CountryLocationField from '@/components/CountryLocationField.vue'
 import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
 import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
+import RoutePreviewMap from '@/components/RoutePreviewMap.vue'
 import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
 import { bodyCharacteristics } from '@/data/bodyCharacteristics'
@@ -45,6 +46,24 @@ const newFreight = ref(createEmptyFreight())
 const errorMessage = ref('')
 const successMessage = ref('')
 const isLoading = ref(false)
+
+const routeValid = ref(false)
+const routeDistanceKm = ref(null)
+
+function onRouteResult({ valid, distanceKm }) {
+  routeValid.value = valid
+  routeDistanceKm.value = distanceKm
+}
+
+const routeHintText = computed(() => {
+  if (routeDistanceKm.value == null) {
+    return 'Distance & €/km will show here once the map validates the route.'
+  }
+  const km = Math.round(routeDistanceKm.value)
+  const price = Number(newFreight.value.price)
+  const perKm = price > 0 ? (price / routeDistanceKm.value).toFixed(2) : null
+  return perKm ? `${km} km · ${perKm} €/km` : `${km} km`
+})
 
 // Decode JWT token to get user info
 function getUserFromToken() {
@@ -109,6 +128,10 @@ async function createFreight() {
     !newFreight.value.price
   ) {
     errorMessage.value = 'Palun täida kohustuslikud väljad: From, To, Loading date, Price!'
+    return
+  }
+  if (!routeValid.value) {
+    errorMessage.value = 'Marsruuti ei õnnestunud kaardil kinnitada - palun kontrolli From/To asukohti!'
     return
   }
 
@@ -231,6 +254,8 @@ function goBack() {
             </div>
           </div>
 
+          <RoutePreviewMap :from="newFreight.from" :to="newFreight.to" @route-result="onRouteResult" />
+
           <div class="freight-filter-row four-col">
             <div class="filter-box">
               <label class="filter-label">Price (€) *</label>
@@ -244,7 +269,7 @@ function goBack() {
                 :disabled="isLoading"
                 class="courses-view-input no-spin-input"
               />
-              <span class="freight-distance-hint">Distance &amp; €/km will show here once the map is added.</span>
+              <span class="freight-distance-hint">{{ routeHintText }}</span>
             </div>
 
             <div class="filter-box">
