@@ -173,6 +173,10 @@ function formatRate(t) {
   return t.minimumRate ? `${t.minimumRate.toFixed(2)} €/km` : '-'
 }
 
+function formatKm(km) {
+  return km != null ? `${Math.round(km)} km` : '-'
+}
+
 // --- Infinite scroll: a sentinel div sits right after the results table.
 const sentinelEl = ref(null)
 let scrollObserver = null
@@ -321,13 +325,14 @@ onUnmounted(() => {
                 <th>Origin</th>
                 <th class="st-arrow-col"></th>
                 <th>Destination</th>
+                <th>KM</th>
                 <th>Rate</th>
               </tr>
             </thead>
             <tbody>
               <template v-if="trucks.length === 0">
                 <tr>
-                  <td colspan="8" class="st-empty-cell">No trucks found.</td>
+                  <td colspan="9" class="st-empty-cell">No trucks found.</td>
                 </tr>
               </template>
               <template v-for="t in trucks" :key="t.id">
@@ -339,10 +344,11 @@ onUnmounted(() => {
                   <td>{{ formatOrigin(t) }}</td>
                   <td class="st-arrow-col">→</td>
                   <td>{{ formatDestination(t) }}</td>
+                  <td>{{ formatKm(t.distanceKm) }}</td>
                   <td>{{ formatRate(t) }}</td>
                 </tr>
                 <tr v-if="expandedId === t.id" class="st-detail-row">
-                  <td colspan="8">
+                  <td colspan="9">
                     <div class="st-detail">
                       <div class="st-detail-col">
                         <h4>Vehicle</h4>
