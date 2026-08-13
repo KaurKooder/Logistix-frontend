@@ -226,10 +226,9 @@ function dayClasses(day) {
     <div v-if="open" class="ldp-backdrop" @click="confirmSelection"></div>
     <div v-if="open" class="ldp-calendar" @click.stop>
       <div class="ldp-cal-header">
-        <button type="button" class="ldp-nav-btn" @click="prevMonth">‹</button>
+        <button type="button" class="ldp-nav-btn" @click="prevMonth" aria-label="Previous month">‹</button>
         <span class="ldp-month-label">{{ monthLabel }}</span>
-        <button type="button" class="ldp-clear-link" @click="clearSelection">clear</button>
-        <button type="button" class="ldp-nav-btn" @click="nextMonth">›</button>
+        <button type="button" class="ldp-nav-btn" @click="nextMonth" aria-label="Next month">›</button>
       </div>
       <div class="ldp-weekdays">
         <span v-for="wd in weekdayLabels" :key="wd">{{ wd }}</span>
@@ -245,8 +244,11 @@ function dayClasses(day) {
         </span>
       </div>
       <div class="ldp-actions">
-        <button type="button" class="ldp-cancel-btn" @click="cancelSelection">Cancel</button>
-        <button type="button" class="ldp-ok-btn" @click="confirmSelection">OK</button>
+        <button type="button" class="ldp-clear-link" @click="clearSelection">Clear</button>
+        <div class="ldp-actions-main">
+          <button type="button" class="ldp-cancel-btn" @click="cancelSelection">Cancel</button>
+          <button type="button" class="ldp-ok-btn" @click="confirmSelection">OK</button>
+        </div>
       </div>
     </div>
   </div>
@@ -358,13 +360,26 @@ function dayClasses(day) {
   margin-bottom: 6px;
 }
 
+/* A bigger, clearly-clickable square button rather than a bare glyph - the
+   previous version was hard to hit precisely, making month-to-month
+   navigation feel harder than it should be. */
 .ldp-nav-btn {
-  background: transparent;
-  border: none;
+  background: #f4f4f4;
+  border: 1px solid #ddd;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
-  color: #666;
-  padding: 0 4px;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #555;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.ldp-nav-btn:hover {
+  background: #fdf3e4;
+  border-color: #d4a76a;
+  color: #b55a30;
 }
 
 .ldp-month-label {
@@ -375,6 +390,8 @@ function dayClasses(day) {
   text-align: center;
 }
 
+/* Moved out of the header (it was crowding the month nav) and into the
+   actions row, away from Cancel/OK so it isn't mistaken for a primary action. */
 .ldp-clear-link {
   background: transparent;
   border: none;
@@ -382,7 +399,7 @@ function dayClasses(day) {
   font-size: 0.75rem;
   color: #b55a30;
   text-decoration: underline;
-  padding: 0;
+  padding: 4px 0;
 }
 
 .ldp-weekdays {
@@ -434,9 +451,12 @@ function dayClasses(day) {
   font-weight: 600;
 }
 
+/* A thin horizontal band through the middle of the cell rather than filling
+   it solid, so the days between the two picked dates read as a connecting
+   line running through them instead of each one being its own filled box. */
 .ldp-day-range-mid {
-  background: #cfe2f3;
   border-radius: 0;
+  background: linear-gradient(to bottom, transparent 42%, #a8cbe8 42%, #a8cbe8 58%, transparent 58%);
 }
 
 .ldp-day-range-end {
@@ -448,15 +468,21 @@ function dayClasses(day) {
 
 .ldp-actions {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 8px;
 }
 
+.ldp-actions-main {
+  display: flex;
+  gap: 8px;
+}
+
 .ldp-cancel-btn,
 .ldp-ok-btn {
-  flex: 1;
   border: none;
-  padding: 8px;
+  padding: 8px 16px;
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;

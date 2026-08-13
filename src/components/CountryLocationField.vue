@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { countryGroups } from '@/data/countries'
+import apiClient from '@/services/api'
 
 const props = defineProps({
   modelValue: {
@@ -46,8 +47,118 @@ function setMode(newMode) {
   emit('update:modelValue', { ...props.modelValue, mode: newMode })
 }
 
+// --- Location suggestions (type-ahead, backed by HERE via /api/geocoding/suggest) ---
+// The input shows a "City - ZIP" display buffer, not modelValue.location directly:
+// the saved value should only ever be a resolved postal code (or the best precise
+// text HERE offers), never arbitrary free-typed text, while the box still shows the
+// human-readable city name alongside it. Typing just drives the suggestion list;
+// confirming one (by click, or the best live match on blur) is what updates modelValue.
+const searchText = ref(props.modelValue.location || '')
+// Last confirmed display text - what searchText resets to if the user types something
+// that never resolves to a real match. Kept separate from modelValue.location because
+// the display ("Tartu - 51003") and the saved value ("51003") differ.
+const confirmedDisplay = ref(props.modelValue.location || '')
+const suggestions = ref([])
+const suggestOpen = ref(false)
+const loadingSuggest = ref(false)
+let debounceTimer = null
+let requestToken = 0
+// Tracks the location value we last emitted ourselves, so the watch below can tell
+// "the parent handed our own update:modelValue back down through v-model" (skip -
+// searchText already holds the richer "City - ZIP" display) apart from a genuinely
+// external change, e.g. loading a different posting or a parent-driven form reset
+// (sync - we only have the raw saved value to show, no city to pair it with).
+let lastEmittedLocation = props.modelValue.location || ''
+
+watch(
+  () => props.modelValue.location,
+  (val) => {
+    if ((val || '') === lastEmittedLocation) return
+    searchText.value = val || ''
+    confirmedDisplay.value = val || ''
+    lastEmittedLocation = val || ''
+  },
+)
+
+function suggestionDisplay(item) {
+  const city = item.city || item.label || ''
+  return city && item.postalCode ? `${city} - ${item.postalCode}` : item.postalCode || city
+}
+
+function suggestionValue(item) {
+  return item.postalCode || item.city || item.label || ''
+}
+
+async function fetchSuggestions(query) {
+  const country = props.modelValue.country
+  const trimmed = query.trim()
+  if (trimmed.length < 2 || !country) {
+    suggestions.value = []
+    suggestOpen.value = false
+    return
+  }
+  const token = ++requestToken
+  loadingSuggest.value = true
+  try {
+    const res = await apiClient.get('/geocoding/suggest', { params: { query: trimmed, country } })
+    if (token !== requestToken) return // a newer request has already superseded this one
+    suggestions.value = res.data || []
+    suggestOpen.value = suggestions.value.length > 0
+  } catch {
+    if (token !== requestToken) return
+    suggestions.value = []
+    suggestOpen.value = false
+  } finally {
+    if (token === requestToken) loadingSuggest.value = false
+  }
+}
+
 function onLocationInput(e) {
-  emit('update:modelValue', { ...props.modelValue, location: e.target.value })
+  searchText.value = e.target.value
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => fetchSuggestions(searchText.value), 300)
+}
+
+function onLocationFocus() {
+  if (suggestions.value.length) suggestOpen.value = true
+}
+
+function selectSuggestion(item) {
+  searchText.value = suggestionDisplay(item)
+  confirmedDisplay.value = searchText.value
+  suggestions.value = []
+  suggestOpen.value = false
+  const resolved = suggestionValue(item)
+  lastEmittedLocation = resolved
+  emit('update:modelValue', { ...props.modelValue, location: resolved })
+}
+
+function clearLocation() {
+  searchText.value = ''
+  confirmedDisplay.value = ''
+  lastEmittedLocation = ''
+  emit('update:modelValue', { ...props.modelValue, location: '' })
+}
+
+async function onLocationBlur() {
+  suggestOpen.value = false
+  if (searchText.value === confirmedDisplay.value) return // untouched, nothing to resolve
+
+  clearTimeout(debounceTimer)
+  const trimmed = searchText.value.trim()
+  if (trimmed.length < 2 || !props.modelValue.country) {
+    clearLocation()
+    return
+  }
+  // Re-check against live results so we don't act on a stale/in-flight suggestion list.
+  await fetchSuggestions(trimmed)
+  if (suggestions.value.length) {
+    // A valid match exists for what was typed - keep it, even though the user
+    // clicked away instead of explicitly picking it from the dropdown.
+    selectSuggestion(suggestions.value[0])
+  } else {
+    clearLocation()
+  }
 }
 
 function onRadiusChange(e) {
@@ -236,13 +347,28 @@ const countryTriggerText = computed(() => {
       </div>
 
       <template v-if="mode === 'radius'">
-        <input
-          class="clf-input"
-          :value="modelValue.location"
-          @input="onLocationInput"
-          type="text"
-          :placeholder="locationPlaceholder"
-        />
+        <div class="clf-location-wrap">
+          <input
+            class="clf-input"
+            :value="searchText"
+            @input="onLocationInput"
+            @focus="onLocationFocus"
+            @blur="onLocationBlur"
+            type="text"
+            autocomplete="off"
+            :placeholder="locationPlaceholder"
+          />
+          <ul v-if="suggestOpen && suggestions.length" class="clf-suggest-list">
+            <li
+              v-for="s in suggestions"
+              :key="s.label"
+              class="clf-suggest-option"
+              @mousedown.prevent="selectSuggestion(s)"
+            >
+              <span>{{ suggestionDisplay(s) }}</span>
+            </li>
+          </ul>
+        </div>
         <div v-if="showRadius" class="clf-radius-group">
           <input
             class="clf-input clf-radius"
@@ -498,6 +624,48 @@ const countryTriggerText = computed(() => {
 
 .clf-input {
   flex: 1;
+}
+
+.clf-location-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.clf-location-wrap .clf-input {
+  width: 100%;
+}
+
+.clf-suggest-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 25;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.clf-suggest-option {
+  padding: 7px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #333;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clf-suggest-option:hover {
+  background: #f5f5f5;
 }
 
 .clf-radius-group {
