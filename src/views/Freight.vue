@@ -6,6 +6,7 @@ import CountryLocationField from '@/components/CountryLocationField.vue'
 import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
 import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
 import RouteMap from '@/components/RouteMap.vue'
+import RouteCalculator from '@/components/RouteCalculator.vue'
 import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
 import { bodyCharacteristics } from '@/data/bodyCharacteristics'
@@ -789,10 +790,11 @@ onUnmounted(() => {
               </template>
 
               <template v-else>
-                <div class="freight-calculate-placeholder">
-                  Cost calculator coming soon — this will estimate what this route
-                  should cost using your own rates.
-                </div>
+                <RouteCalculator
+                  :key="selectedCourse.id"
+                  :course-id="selectedCourse.id"
+                  :price="selectedCourse.price"
+                />
               </template>
             </div>
             <div v-else class="freight-detail-placeholder">
@@ -1248,13 +1250,6 @@ onUnmounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   color: #b55a30;
-}
-
-.freight-calculate-placeholder {
-  padding: 30px 10px;
-  text-align: center;
-  color: #999;
-  font-size: 0.88rem;
 }
 
 .freight-detail-grid {
