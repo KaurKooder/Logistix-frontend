@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import apiClient from '@/services/api'
-import { createRouteMap, drawRoute } from '@/composables/useLeafletRoute'
+import { createRouteMap, drawRoute, drawSearchCircles } from '@/composables/useLeafletRoute'
 
 const props = defineProps({
   // Full API path to GET, e.g. `/courses/${id}/route` or `/trucks/${id}/route`.
@@ -9,6 +9,25 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  // Shaped like CountryLocationField's v-model: {radius, lat, lng}. The search filter's own
+  // from/to (not this posting's) - drawn as light-blue radius circles for context on why this
+  // posting matched.
+  searchFrom: {
+    type: Object,
+    default: () => ({}),
+  },
+  searchTo: {
+    type: Object,
+    default: () => ({}),
+  },
+})
+
+// Search-radius circles derived from the search filter's from/to - only for sides that
+// actually have a radius set and a geocoded point to center on.
+const searchCircles = computed(() => {
+  return [props.searchFrom, props.searchTo]
+    .filter((side) => side && side.radius && Number(side.radius) > 0 && side.lat != null && side.lng != null)
+    .map((side) => ({ lat: side.lat, lng: side.lng, radiusKm: Number(side.radius) }))
 })
 
 const emit = defineEmits(['distance-loaded'])
@@ -33,6 +52,7 @@ async function loadRoute() {
       map = createRouteMap(mapEl.value)
     }
     drawRoute(map, latLngs)
+    drawSearchCircles(map, searchCircles.value)
 
     emit('distance-loaded', distanceKm)
   } catch (e) {
@@ -43,6 +63,11 @@ async function loadRoute() {
 }
 
 onMounted(loadRoute)
+
+// Redraws just the circles (no re-fetch) when the search filter's radius/point changes.
+watch(searchCircles, (circles) => {
+  if (map && !loading.value && !error.value) drawSearchCircles(map, circles)
+})
 
 onUnmounted(() => {
   if (map) {

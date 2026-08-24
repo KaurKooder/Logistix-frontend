@@ -6,7 +6,7 @@ import apiClient from '@/services/api'
 const props = defineProps({
   modelValue: {
     type: Object,
-    default: () => ({ mode: 'radius', country: '', countries: [], location: '', radius: '' }),
+    default: () => ({ mode: 'radius', country: '', countries: [], location: '', radius: '', lat: null, lng: null }),
   },
   label: {
     type: String,
@@ -130,14 +130,16 @@ function selectSuggestion(item) {
   suggestOpen.value = false
   const resolved = suggestionValue(item)
   lastEmittedLocation = resolved
-  emit('update:modelValue', { ...props.modelValue, location: resolved })
+  // Keep the suggestion's coordinates alongside the saved value - the search radius
+  // circle drawn on results' maps needs a point to center on, not just the postal code.
+  emit('update:modelValue', { ...props.modelValue, location: resolved, lat: item.lat, lng: item.lng })
 }
 
 function clearLocation() {
   searchText.value = ''
   confirmedDisplay.value = ''
   lastEmittedLocation = ''
-  emit('update:modelValue', { ...props.modelValue, location: '' })
+  emit('update:modelValue', { ...props.modelValue, location: '', lat: null, lng: null })
 }
 
 async function onLocationBlur() {

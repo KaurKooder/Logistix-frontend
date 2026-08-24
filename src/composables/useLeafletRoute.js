@@ -33,3 +33,33 @@ export function drawRoute(map, latLngs) {
   map.invalidateSize()
   map.fitBounds(line.getBounds(), { padding: [24, 24] })
 }
+
+// Draws (or replaces) light-blue "search radius" circles on an existing map instance -
+// context for why a result matched a from/to radius search, layered on top of its own
+// route. `circles` is an array of {lat, lng, radiusKm}; pass an empty/nullish value to
+// clear. Expands the current view (route bounds, if any) to fit the circles too.
+export function drawSearchCircles(map, circles) {
+  if (map._searchCircleGroup) {
+    map.removeLayer(map._searchCircleGroup)
+    map._searchCircleGroup = null
+  }
+  if (!circles || !circles.length) return
+
+  const layers = circles.map((c) =>
+    L.circle([c.lat, c.lng], {
+      radius: c.radiusKm * 1000,
+      color: '#4a90d9',
+      weight: 1.5,
+      fillColor: '#4a90d9',
+      fillOpacity: 0.12,
+    }),
+  )
+  map._searchCircleGroup = L.layerGroup(layers).addTo(map)
+
+  let bounds = map._routeLayerGroup ? L.featureGroup(map._routeLayerGroup.getLayers()).getBounds() : null
+  for (const layer of layers) {
+    bounds = bounds ? bounds.extend(layer.getBounds()) : layer.getBounds()
+  }
+  map.invalidateSize()
+  map.fitBounds(bounds, { padding: [24, 24] })
+}
