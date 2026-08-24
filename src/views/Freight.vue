@@ -11,6 +11,7 @@ import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
 import { bodyCharacteristics } from '@/data/bodyCharacteristics'
 import { cargoTypes } from '@/data/cargoTypes'
+import { formatThousands } from '@/utils/format'
 import '@/assets/css/coursesviewcss.css'
 
 const router = useRouter()
@@ -82,13 +83,139 @@ const tabs = ref([
     muted: false,
     loadingMore: false,
     filter: createDefaultFilter(),
+    // Notification badge bookkeeping (see loadCoursesForTab): ids already
+    // shown to the user for this tab, and how many newly-appeared postings
+    // haven't been viewed yet.
+    lastSeenIds: new Set(),
+    unseenCount: 0,
+    hasLoadedOnce: false,
   },
 ])
 
 const activeTabId = ref(tabs.value[0].id)
 
+// --- Saved postings & hidden postings ---
+// No backend "bookmark" feature exists yet, so this is a frontend-only
+// stopgap: both saved and hidden postings are kept as full snapshots (so
+// their tabs render without extra API calls, at the cost of the info going
+// stale if the real posting later changes), persisted to localStorage so
+// they survive a reload.
+const SAVED_STORAGE_KEY = 'logistix.freight.saved'
+const HIDDEN_STORAGE_KEY = 'logistix.freight.hidden'
+
+function loadSnapshotList(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '[]')
+  } catch {
+    return []
+  }
+}
+
+const savedCourses = ref(loadSnapshotList(SAVED_STORAGE_KEY))
+const hiddenCourses = ref(loadSnapshotList(HIDDEN_STORAGE_KEY))
+const hiddenIds = computed(() => new Set(hiddenCourses.value.map((c) => c.id)))
+// Neither pseudo-tab is a real search tab (no filter/pagination), so their
+// expanded-row state lives separately rather than forcing the shape onto them.
+const savedExpandedId = ref(null)
+const hiddenExpandedId = ref(null)
+
+function isSaved(id) {
+  return savedCourses.value.some((c) => c.id === id)
+}
+
+function toggleSaved(course) {
+  const idx = savedCourses.value.findIndex((c) => c.id === course.id)
+  if (idx === -1) {
+    savedCourses.value = [...savedCourses.value, course]
+  } else {
+    savedCourses.value = savedCourses.value.filter((c) => c.id !== course.id)
+    if (savedExpandedId.value === course.id) savedExpandedId.value = null
+  }
+  localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(savedCourses.value))
+}
+
+const selectedForHide = ref(new Set())
+
+function toggleHideSelection(id) {
+  const next = new Set(selectedForHide.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  selectedForHide.value = next
+}
+
+// Same checkbox column and action-bar button drive both directions: hide
+// selected postings from a normal search tab, or unhide selected postings
+// while looking at the Hidden tab itself - see bulkHideAction.
+function hideSelected() {
+  const toHide = activeTab.value.courses.filter((c) => selectedForHide.value.has(c.id))
+  const existingIds = new Set(hiddenCourses.value.map((c) => c.id))
+  hiddenCourses.value = [...hiddenCourses.value, ...toHide.filter((c) => !existingIds.has(c.id))]
+  selectedForHide.value = new Set()
+  localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify(hiddenCourses.value))
+}
+
+function unhideSelected() {
+  hiddenCourses.value = hiddenCourses.value.filter((c) => !selectedForHide.value.has(c.id))
+  if (hiddenExpandedId.value && selectedForHide.value.has(hiddenExpandedId.value)) {
+    hiddenExpandedId.value = null
+  }
+  selectedForHide.value = new Set()
+  localStorage.setItem(HIDDEN_STORAGE_KEY, JSON.stringify(hiddenCourses.value))
+}
+
+function bulkHideAction() {
+  if (activeTabId.value === HIDDEN_TAB_ID) unhideSelected()
+  else hideSelected()
+}
+
+const SAVED_TAB_ID = 'saved-tab'
+const HIDDEN_TAB_ID = 'hidden-tab'
+
 const activeTab = computed(() => {
+  if (activeTabId.value === SAVED_TAB_ID) {
+    return {
+      id: SAVED_TAB_ID,
+      title: 'Saved',
+      courses: savedCourses.value,
+      totalPages: 1,
+      showAdvanced: false,
+      get expandedId() {
+        return savedExpandedId.value
+      },
+      set expandedId(v) {
+        savedExpandedId.value = v
+      },
+      muted: true,
+      loadingMore: false,
+      filter: createDefaultFilter(),
+    }
+  }
+  if (activeTabId.value === HIDDEN_TAB_ID) {
+    return {
+      id: HIDDEN_TAB_ID,
+      title: 'Hidden',
+      courses: hiddenCourses.value,
+      totalPages: 1,
+      showAdvanced: false,
+      get expandedId() {
+        return hiddenExpandedId.value
+      },
+      set expandedId(v) {
+        hiddenExpandedId.value = v
+      },
+      muted: true,
+      loadingMore: false,
+      filter: createDefaultFilter(),
+    }
+  }
   return tabs.value.find((t) => t.id === activeTabId.value) || tabs.value[0]
+})
+
+// Hidden ids apply to whichever real search/Saved tab is active - but not to
+// the Hidden tab itself, or everything in it would immediately filter away.
+const visibleCourses = computed(() => {
+  if (activeTabId.value === HIDDEN_TAB_ID) return activeTab.value.courses
+  return activeTab.value.courses.filter((c) => !hiddenIds.value.has(c.id))
 })
 
 // --- Tab title inline rename (double-click to edit) ---
@@ -121,6 +248,9 @@ function addNewTab() {
     muted: false,
     loadingMore: false,
     filter: createDefaultFilter(),
+    lastSeenIds: new Set(),
+    unseenCount: 0,
+    hasLoadedOnce: false,
   })
   activeTabId.value = newId
   updateUrl()
@@ -146,7 +276,22 @@ function updateUrl() {
   })
 }
 
+function selectTab(tab) {
+  activeTabId.value = tab.id
+  tab.unseenCount = 0
+  updateUrl()
+}
+
+function selectSavedTab() {
+  activeTabId.value = SAVED_TAB_ID
+}
+
+function selectHiddenTab() {
+  activeTabId.value = HIDDEN_TAB_ID
+}
+
 async function loadCoursesForTab(tab, { append = false } = {}) {
+  if (tab.id === SAVED_TAB_ID || tab.id === HIDDEN_TAB_ID) return // static list, not a live search
   try {
     const f = tab.filter
 
@@ -205,6 +350,19 @@ async function loadCoursesForTab(tab, { append = false } = {}) {
     const newCourses = res.data.content || []
     tab.courses = append ? [...tab.courses, ...newCourses] : newCourses
     tab.totalPages = res.data.totalPages || 1
+
+    // A fresh (non-paginated) search that turns up postings this tab hasn't
+    // shown before counts as "new" for the notification badge - but not on
+    // the very first load, or every initial search would start "unread".
+    if (!append) {
+      const ids = new Set(newCourses.map((c) => c.id))
+      if (tab.hasLoadedOnce && !tab.muted) {
+        const freshlyNew = [...ids].filter((id) => !tab.lastSeenIds.has(id))
+        tab.unseenCount += freshlyNew.length
+      }
+      tab.lastSeenIds = ids
+      tab.hasLoadedOnce = true
+    }
   } catch (error) {
     console.error('Error loading freight:', error)
     if (error.response && error.response.status === 401) {
@@ -259,13 +417,25 @@ const detailTab = ref('info')
 const courseDistances = ref({})
 
 function formatKm(km) {
-  return km != null ? `${Math.round(km)} km` : '-'
+  return km != null ? `${formatThousands(Math.round(km))} km` : '-'
+}
+
+function formatPricePerKm(course) {
+  const km = courseDistances.value[course.id] ?? course.distanceKm
+  if (course.price == null || !km) return '—'
+  return `${(course.price / km).toFixed(2)} €/km`
 }
 
 function formatDate(iso) {
   if (!iso) return ''
   const [y, m, d] = iso.split('-')
   return `${d}.${m}.${y}`
+}
+
+function formatTimeRange(start, end) {
+  if (!start && !end) return ''
+  if (start && end) return `${start}–${end}`
+  return start || end
 }
 
 // e.g. "EE-Tallinn" - country code and location joined with a hyphen, not a space.
@@ -289,20 +459,20 @@ function formatAge(createdAt) {
   if (diffMin < 60) return `${diffMin} min`
 
   const totalHours = Math.ceil(diffMin / 60)
-  if (totalHours < 24) return `${totalHours}h>`
+  if (totalHours < 24) return `${totalHours}h`
 
   const days = Math.floor(totalHours / 24)
   const hours = totalHours % 24
   const dayLabel = `${days} day${days > 1 ? 's' : ''}`
-  return hours > 0 ? `${dayLabel} ${hours}h>` : `${dayLabel}>`
+  return hours > 0 ? `${dayLabel} ${hours}h` : dayLabel
 }
 
 function formatLength(len) {
-  return len != null && len !== '' ? `${len} m` : ''
+  return len != null && len !== '' ? `${formatThousands(len)} m` : ''
 }
 
 function formatWeight(weight) {
-  return weight != null && weight !== '' ? `${weight} kg` : ''
+  return weight != null && weight !== '' ? `${formatThousands(weight)} kg` : ''
 }
 
 async function register(courseId) {
@@ -377,9 +547,7 @@ onUnmounted(() => {
             :key="tab.id"
             class="search-tab"
             :class="{ active: tab.id === activeTabId }"
-            @click="activeTabId = tab.id,
-            updateUrl()
-            "
+            @click="selectTab(tab)"
           >
             <input
               v-if="editingTabId === tab.id"
@@ -403,6 +571,7 @@ onUnmounted(() => {
               @click.stop="toggleTabMute(tab)"
             >
               {{ tab.muted ? '🔕' : '🔔' }}
+              <span v-if="tab.unseenCount > 0" class="tab-notif-badge">{{ tab.unseenCount }}</span>
             </button>
             <button
               v-if="tabs.length > 1"
@@ -412,13 +581,31 @@ onUnmounted(() => {
               ✕
             </button>
           </div>
+          <button @click="addNewTab" class="tab-add-btn" title="Ava uus otsinguaken">+</button>
         </div>
-        <button @click="addNewTab" class="tab-add-btn" title="Ava uus otsinguaken">+</button>
+        <div class="tabs-right-group">
+          <div
+            class="search-tab saved-tab"
+            :class="{ active: activeTabId === 'saved-tab' }"
+            @click="selectSavedTab"
+          >
+            <span class="tab-title">🔖 Saved</span>
+            <span v-if="savedCourses.length" class="tab-count-badge">{{ savedCourses.length }}</span>
+          </div>
+          <div
+            class="search-tab hidden-tab"
+            :class="{ active: activeTabId === 'hidden-tab' }"
+            @click="selectHiddenTab"
+          >
+            <span class="tab-title">Hidden</span>
+            <span v-if="hiddenCourses.length" class="tab-count-badge">{{ hiddenCourses.length }}</span>
+          </div>
+        </div>
       </div>
 
       <div class="courses-view-body">
         <!-- Filtrid -->
-        <section class="freight-filter-section">
+        <section v-if="activeTabId !== SAVED_TAB_ID && activeTabId !== HIDDEN_TAB_ID" class="freight-filter-section">
           <div class="freight-filter-row">
             <CountryLocationField
               v-model="activeTab.filter.from"
@@ -561,14 +748,25 @@ onUnmounted(() => {
             </button>
           </div>
         </section>
+        <section v-else class="freight-saved-header">
+          <h2>{{ activeTabId === HIDDEN_TAB_ID ? 'Hidden postings' : 'Saved postings' }}</h2>
+          <span class="freight-saved-count">{{ activeTab.courses.length }}</span>
+        </section>
 
         <div class="freight-results-layout">
           <div class="freight-list-col">
+            <div v-if="selectedForHide.size > 0" class="freight-hide-bar">
+              <span>{{ selectedForHide.size }} selected</span>
+              <button type="button" class="freight-hide-btn" @click="bulkHideAction">
+                {{ activeTabId === 'hidden-tab' ? 'Unhide selected' : 'Hide selected' }}
+              </button>
+            </div>
+
             <div class="freight-table-wrap">
               <table class="freight-table">
                 <thead>
                   <tr>
-                    <th class="freight-col-arrow"></th>
+                    <th class="freight-col-check"></th>
                     <th>Age</th>
                     <th class="sortable" @click="toggleSort(activeTab, 'startDate')">
                       Date
@@ -586,22 +784,33 @@ onUnmounted(() => {
                     </th>
                     <th>Description</th>
                     <th>Company</th>
+                    <th class="freight-col-star"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  <template v-if="activeTab.courses.length === 0">
+                  <template v-if="visibleCourses.length === 0">
                     <tr>
-                      <td colspan="8" class="freight-empty-row">No freight postings found.</td>
+                      <td colspan="9" class="freight-empty-row">
+                        {{
+                          activeTabId === 'saved-tab'
+                            ? 'No saved postings yet.'
+                            : activeTabId === 'hidden-tab'
+                              ? 'Nothing hidden.'
+                              : 'No freight postings found.'
+                        }}
+                      </td>
                     </tr>
                   </template>
                   <tr
-                    v-for="c in activeTab.courses"
+                    v-for="c in visibleCourses"
                     :key="c.id"
                     class="freight-row"
                     :class="{ expanded: activeTab.expandedId === c.id }"
                     @click="toggleRow(activeTab, c.id)"
                   >
-                    <td class="freight-col-arrow">{{ activeTab.expandedId === c.id ? '▼' : '▶' }}</td>
+                    <td class="freight-col-check" @click.stop="toggleHideSelection(c.id)">
+                      <input type="checkbox" :checked="selectedForHide.has(c.id)" />
+                    </td>
                     <td class="freight-row-age">{{ formatAge(c.createdAt) }}</td>
                     <td>
                       <div class="freight-date-block">
@@ -619,19 +828,34 @@ onUnmounted(() => {
                       <div class="freight-row-sub freight-line"><span class="freight-line-arrow">↓</span>{{ formatPlace(c.toCountry, c.toLocation) }}</div>
                     </td>
                     <td class="freight-row-km">{{ formatKm(courseDistances[c.id] ?? c.distanceKm) }}</td>
-                    <td class="freight-row-price">{{ c.price != null ? c.price + ' €' : '—' }}</td>
+                    <td class="freight-row-price">{{ c.price != null ? formatThousands(c.price) + ' €' : '—' }}</td>
                     <td class="freight-row-desc">
                       <div v-if="c.length">{{ formatLength(c.length) }}</div>
                       <div v-if="c.weight">{{ formatWeight(c.weight) }}</div>
                       <div>{{ c.description || c.mayContain?.[0] || '—' }}</div>
                     </td>
                     <td>{{ c.company || '—' }}</td>
+                    <td class="freight-col-star">
+                      <button
+                        type="button"
+                        class="freight-star-btn"
+                        :class="{ active: isSaved(c.id) }"
+                        :title="isSaved(c.id) ? 'Remove from saved' : 'Save this posting'"
+                        @click.stop="toggleSaved(c)"
+                      >
+                        {{ isSaved(c.id) ? '★' : '☆' }}
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div ref="sentinelEl" class="freight-scroll-sentinel">
+            <div
+              v-if="activeTabId !== 'saved-tab' && activeTabId !== 'hidden-tab'"
+              ref="sentinelEl"
+              class="freight-scroll-sentinel"
+            >
               <span v-if="activeTab.loadingMore" class="freight-scroll-status">Loading more...</span>
               <span
                 v-else-if="activeTab.courses.length > 0 && activeTab.filter.page + 1 >= activeTab.totalPages"
@@ -682,6 +906,9 @@ onUnmounted(() => {
                         </div>
                         <div class="freight-detail-date">
                           {{ formatDate(selectedCourse.startDate) || 'Määramata' }}
+                          <span v-if="formatTimeRange(selectedCourse.loadingTimeStart, selectedCourse.loadingTimeEnd)">
+                            · {{ formatTimeRange(selectedCourse.loadingTimeStart, selectedCourse.loadingTimeEnd) }}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -693,6 +920,9 @@ onUnmounted(() => {
                         </div>
                         <div class="freight-detail-date">
                           {{ formatDate(selectedCourse.endDate) || 'Määramata' }}
+                          <span v-if="formatTimeRange(selectedCourse.unloadingTimeStart, selectedCourse.unloadingTimeEnd)">
+                            · {{ formatTimeRange(selectedCourse.unloadingTimeStart, selectedCourse.unloadingTimeEnd) }}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -700,8 +930,8 @@ onUnmounted(() => {
 
                   <div class="freight-detail-col">
                     <h4>Description</h4>
-                    <p v-if="selectedCourse.weight">Load: {{ selectedCourse.weight }} kg</p>
-                    <p v-if="selectedCourse.length">Length: {{ selectedCourse.length }} m</p>
+                    <p v-if="selectedCourse.weight">Load: {{ formatThousands(selectedCourse.weight) }} kg</p>
+                    <p v-if="selectedCourse.length">Length: {{ formatThousands(selectedCourse.length) }} m</p>
                     <p>{{ selectedCourse.description || '—' }}</p>
                     <p v-if="selectedCourse.mayContain?.length">
                       <strong>May contain:</strong> {{ selectedCourse.mayContain.join(', ') }}
@@ -726,8 +956,12 @@ onUnmounted(() => {
                 <div class="freight-detail-price-row">
                   <span class="freight-detail-price-label">Price</span>
                   <span class="freight-detail-price">{{
-                    selectedCourse.price != null ? selectedCourse.price + ' €' : '—'
+                    selectedCourse.price != null ? formatThousands(selectedCourse.price) + ' €' : '—'
                   }}</span>
+                </div>
+                <div class="freight-detail-perkm-row">
+                  <span class="freight-detail-perkm-label">Per km</span>
+                  <span class="freight-detail-perkm">{{ formatPricePerKm(selectedCourse) }}</span>
                 </div>
 
                 <div class="freight-detail-footer">
@@ -766,6 +1000,9 @@ onUnmounted(() => {
                       </div>
                       <div class="freight-detail-date">
                         {{ formatDate(selectedCourse.startDate) || 'Määramata' }}
+                        <span v-if="formatTimeRange(selectedCourse.loadingTimeStart, selectedCourse.loadingTimeEnd)">
+                          · {{ formatTimeRange(selectedCourse.loadingTimeStart, selectedCourse.loadingTimeEnd) }}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -777,6 +1014,9 @@ onUnmounted(() => {
                       </div>
                       <div class="freight-detail-date">
                         {{ formatDate(selectedCourse.endDate) || 'Määramata' }}
+                        <span v-if="formatTimeRange(selectedCourse.unloadingTimeStart, selectedCourse.unloadingTimeEnd)">
+                          · {{ formatTimeRange(selectedCourse.unloadingTimeStart, selectedCourse.unloadingTimeEnd) }}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -819,7 +1059,26 @@ onUnmounted(() => {
 }
 .tabs-container {
   display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+/* Pushed to the far right of the same header row via margin-left: auto,
+   separate from the regular search tabs on the left. */
+.tabs-right-group {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.tab-count-badge {
+  background: #e0e0e0;
+  color: #555;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 8px;
 }
 .search-tab {
   display: flex;
@@ -851,6 +1110,7 @@ onUnmounted(() => {
 }
 
 .tab-notif-btn {
+  position: relative;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -864,6 +1124,27 @@ onUnmounted(() => {
 }
 .tab-notif-btn:hover {
   opacity: 1;
+}
+
+.tab-notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #e53935;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.saved-tab,
+.hidden-tab {
+  cursor: pointer;
 }
 
 .tab-close-btn {
@@ -1105,10 +1386,76 @@ onUnmounted(() => {
   margin-left: 2px;
 }
 
-.freight-col-arrow {
-  width: 24px;
+.freight-col-check,
+.freight-col-star {
+  width: 28px;
   text-align: center;
-  color: #999;
+}
+
+.freight-star-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #ccc;
+  padding: 2px;
+}
+
+.freight-star-btn.active,
+.freight-star-btn:hover {
+  color: #d4a76a;
+}
+
+.freight-hide-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fdf3e4;
+  border: 1px solid #e8c491;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: #555;
+}
+
+.freight-hide-btn {
+  background: #d4a76a;
+  color: #1a1a1a;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.freight-hide-btn:hover {
+  background: #b88f55;
+}
+
+.freight-saved-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
+.freight-saved-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.freight-saved-count {
+  background: #f0f0f0;
+  color: #666;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
 }
 
 .freight-row {
@@ -1250,6 +1597,25 @@ onUnmounted(() => {
   font-weight: 700;
   text-transform: uppercase;
   color: #b55a30;
+}
+
+.freight-detail-perkm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.freight-detail-perkm-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #999;
+}
+
+.freight-detail-perkm {
+  font-size: 0.85rem;
+  color: #666;
 }
 
 .freight-detail-grid {

@@ -7,6 +7,7 @@ import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
 import RoutePreviewMap from '@/components/RoutePreviewMap.vue'
 import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
+import { formatThousands } from '@/utils/format'
 import '@/assets/css/coursesviewcss.css'
 
 function createDefaultFilter() {
@@ -119,23 +120,28 @@ function formatAge(createdAt) {
   if (diffMin < 60) return `${diffMin} min`
 
   const totalHours = Math.ceil(diffMin / 60)
-  if (totalHours < 24) return `${totalHours}h>`
+  if (totalHours < 24) return `${totalHours}h`
 
   const days = Math.floor(totalHours / 24)
   const hours = totalHours % 24
   const dayLabel = `${days} day${days > 1 ? 's' : ''}`
-  return hours > 0 ? `${dayLabel} ${hours}h>` : `${dayLabel}>`
+  return hours > 0 ? `${dayLabel} ${hours}h` : dayLabel
 }
 
 function formatShortDate(iso) {
   if (!iso) return ''
   const [, m, d] = iso.split('-')
-  return `${Number.parseInt(m, 10)}/${Number.parseInt(d, 10)}`
+  return `${Number.parseInt(d, 10)}.${Number.parseInt(m, 10)}`
 }
 
 function formatAvailable(t) {
   if (!t.availableStartDate) return '—'
   if (t.availableEndDate && t.availableEndDate !== t.availableStartDate) {
+    const [ys, ms, ds] = t.availableStartDate.split('-')
+    const [ye, me, de] = t.availableEndDate.split('-')
+    if (ys === ye && ms === me) {
+      return `${Number.parseInt(ds, 10)}-${Number.parseInt(de, 10)}.${Number.parseInt(ms, 10)}`
+    }
     return `${formatShortDate(t.availableStartDate)}-${formatShortDate(t.availableEndDate)}`
   }
   return formatShortDate(t.availableStartDate)
@@ -163,18 +169,18 @@ function formatDestination(t) {
 function formatTruckDescriptor(t) {
   const parts = []
   if (t.vehicleType?.length) parts.push(t.vehicleType.join(', '))
-  if (t.vehicleWeight) parts.push(`${t.vehicleWeight} kg`)
-  if (t.vehicleLength) parts.push(`${t.vehicleLength} m`)
+  if (t.vehicleWeight) parts.push(`${formatThousands(t.vehicleWeight)} kg`)
+  if (t.vehicleLength) parts.push(`${formatThousands(t.vehicleLength)} m`)
   if (t.bodyType?.length) parts.push(t.bodyType.join(', '))
   return parts.length ? parts.join(' | ') : '—'
 }
 
 function formatRate(t) {
-  return t.minimumRate ? `${t.minimumRate.toFixed(2)} €/km` : '-'
+  return t.minimumRate ? `${formatThousands(t.minimumRate.toFixed(2))} €/km` : '-'
 }
 
 function formatKm(km) {
-  return km != null ? `${Math.round(km)} km` : '-'
+  return km != null ? `${formatThousands(Math.round(km))} km` : '-'
 }
 
 // --- Infinite scroll: a sentinel div sits right after the results table.
@@ -322,9 +328,7 @@ onUnmounted(() => {
                 <th>Age</th>
                 <th>Truck</th>
                 <th>Available</th>
-                <th>Origin</th>
-                <th class="st-arrow-col"></th>
-                <th>Destination</th>
+                <th>Trip</th>
                 <th>KM</th>
                 <th>Rate</th>
               </tr>
@@ -332,23 +336,24 @@ onUnmounted(() => {
             <tbody>
               <template v-if="trucks.length === 0">
                 <tr>
-                  <td colspan="9" class="st-empty-cell">No trucks found.</td>
+                  <td colspan="7" class="st-empty-cell">No trucks found.</td>
                 </tr>
               </template>
               <template v-for="t in trucks" :key="t.id">
                 <tr class="st-row" :class="{ expanded: expandedId === t.id }" @click="toggleRow(t.id)">
                   <td class="st-arrow-col">{{ expandedId === t.id ? '▼' : '▶' }}</td>
-                  <td>{{ formatAge(t.createdAt) }}</td>
+                  <td>{{ formatAge(t.updatedAt || t.createdAt) }}</td>
                   <td>{{ formatTruckDescriptor(t) }}</td>
                   <td>{{ formatAvailable(t) }}</td>
-                  <td>{{ formatOrigin(t) }}</td>
-                  <td class="st-arrow-col">→</td>
-                  <td>{{ formatDestination(t) }}</td>
+                  <td>
+                    <div class="st-line"><span class="st-line-arrow">↓</span>{{ formatOrigin(t) }}</div>
+                    <div class="st-row-sub st-line"><span class="st-line-arrow">↓</span>{{ formatDestination(t) }}</div>
+                  </td>
                   <td>{{ formatKm(t.distanceKm) }}</td>
                   <td>{{ formatRate(t) }}</td>
                 </tr>
                 <tr v-if="expandedId === t.id" class="st-detail-row">
-                  <td colspan="9">
+                  <td colspan="7">
                     <div class="st-detail">
                       <div class="st-detail-col">
                         <h4>Vehicle</h4>
@@ -580,6 +585,24 @@ onUnmounted(() => {
   width: 24px;
   text-align: center;
   color: #999;
+}
+
+.st-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.st-line-arrow {
+  color: #999;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.st-row-sub {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 2px;
 }
 
 .st-row {

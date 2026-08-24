@@ -11,13 +11,18 @@ import { bodyTypes } from '@/data/bodyTypes'
 import { bodyCharacteristics } from '@/data/bodyCharacteristics'
 import { cargoTypes } from '@/data/cargoTypes'
 import { callingCodes } from '@/data/callingCodes'
+import { formatPhoneNumber } from '@/utils/phone'
+import { formatThousands } from '@/utils/format'
 import '@/assets/css/coursesviewcss.css'
 
 const router = useRouter()
 
+const COMMENTS_MAX_LENGTH = 500
+
 function createEmptyFreight() {
   return {
     name: '',
+    internalReference: '',
     from: { country: '', location: '' },
     to: { country: '', location: '' },
     loadingDate: { mode: '', start: '', end: '', dates: [] },
@@ -55,11 +60,15 @@ function onRouteResult({ valid, distanceKm }) {
   routeDistanceKm.value = distanceKm
 }
 
+function onPhoneInput(e) {
+  newFreight.value.contactPhoneNumber = formatPhoneNumber(e.target.value)
+}
+
 const routeHintText = computed(() => {
   if (routeDistanceKm.value == null) {
     return 'Distance & €/km will show here once the map validates the route.'
   }
-  const km = Math.round(routeDistanceKm.value)
+  const km = formatThousands(Math.round(routeDistanceKm.value))
   const price = Number(newFreight.value.price)
   const perKm = price > 0 ? (price / routeDistanceKm.value).toFixed(2) : null
   return perKm ? `${km} km · ${perKm} €/km` : `${km} km`
@@ -143,6 +152,7 @@ async function createFreight() {
 
     const freightData = {
       name: newFreight.value.name || undefined,
+      internalReference: newFreight.value.internalReference || undefined,
       fromCountry: newFreight.value.from.country,
       fromLocation: newFreight.value.from.location || undefined,
       toCountry: newFreight.value.to.country,
@@ -235,9 +245,15 @@ function goBack() {
             <div class="filter-box">
               <label class="filter-label">Loading time</label>
               <div class="filter-range-group">
-                <input v-model="newFreight.loadingTimeStart" type="time" class="courses-view-input" />
+                <div class="filter-range-item">
+                  <span class="filter-range-item-label">From</span>
+                  <input v-model="newFreight.loadingTimeStart" type="time" class="courses-view-input" />
+                </div>
                 <span class="filter-range-sep"></span>
-                <input v-model="newFreight.loadingTimeEnd" type="time" class="courses-view-input" />
+                <div class="filter-range-item">
+                  <span class="filter-range-item-label">Until</span>
+                  <input v-model="newFreight.loadingTimeEnd" type="time" class="courses-view-input" />
+                </div>
               </div>
             </div>
             <LoadingDatePicker
@@ -247,155 +263,181 @@ function goBack() {
             <div class="filter-box">
               <label class="filter-label">Unloading time</label>
               <div class="filter-range-group">
-                <input v-model="newFreight.unloadingTimeStart" type="time" class="courses-view-input" />
+                <div class="filter-range-item">
+                  <span class="filter-range-item-label">From</span>
+                  <input v-model="newFreight.unloadingTimeStart" type="time" class="courses-view-input" />
+                </div>
                 <span class="filter-range-sep"></span>
-                <input v-model="newFreight.unloadingTimeEnd" type="time" class="courses-view-input" />
+                <div class="filter-range-item">
+                  <span class="filter-range-item-label">Until</span>
+                  <input v-model="newFreight.unloadingTimeEnd" type="time" class="courses-view-input" />
+                </div>
               </div>
             </div>
           </div>
 
-          <RoutePreviewMap :from="newFreight.from" :to="newFreight.to" @route-result="onRouteResult" />
+          <div class="pl-map-side-row">
+            <div class="pl-left-column">
+              <div class="freight-filter-row four-col">
+                <div class="filter-box">
+                  <label class="filter-label">Weight</label>
+                  <div class="unit-input-group">
+                    <input
+                      v-model.number="newFreight.weight"
+                      type="number"
+                      step="1"
+                      min="0"
+                      inputmode="numeric"
+                      placeholder="5000"
+                      :disabled="isLoading"
+                      class="courses-view-input unit-input"
+                    />
+                    <span class="unit-suffix">kg</span>
+                  </div>
+                </div>
 
-          <div class="freight-filter-row four-col">
-            <div class="filter-box">
-              <label class="filter-label">Price (€) *</label>
-              <input
-                v-model.number="newFreight.price"
-                type="number"
-                step="0.01"
-                min="0"
-                inputmode="numeric"
-                placeholder="0.00"
-                :disabled="isLoading"
-                class="courses-view-input no-spin-input"
-              />
-              <span class="freight-distance-hint">{{ routeHintText }}</span>
-            </div>
+                <div class="filter-box">
+                  <label class="filter-label">Length</label>
+                  <div class="unit-input-group">
+                    <input
+                      v-model.number="newFreight.length"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      inputmode="numeric"
+                      placeholder="13.6"
+                      :disabled="isLoading"
+                      class="courses-view-input unit-input"
+                    />
+                    <span class="unit-suffix">m</span>
+                  </div>
+                </div>
 
-            <div class="filter-box">
-              <label class="filter-label">Length</label>
-              <div class="unit-input-group">
-                <input
-                  v-model.number="newFreight.length"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  inputmode="numeric"
-                  placeholder="13.6"
-                  :disabled="isLoading"
-                  class="courses-view-input unit-input"
-                />
-                <span class="unit-suffix">m</span>
+                <div class="filter-box">
+                  <label class="filter-label">Price (€) *</label>
+                  <input
+                    v-model.number="newFreight.price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    inputmode="numeric"
+                    placeholder="0.00"
+                    :disabled="isLoading"
+                    class="courses-view-input no-spin-input"
+                  />
+                  <span class="freight-distance-hint">{{ routeHintText }}</span>
+                </div>
+
+                <div class="filter-box">
+                  <label class="filter-label">Vehicle and body type</label>
+                  <div class="vb-group">
+                    <CheckboxDropdown
+                      v-model="newFreight.vehicleType"
+                      :options="vehicleTypes"
+                      placeholder="Vehicle"
+                    />
+                    <CheckboxDropdown
+                      v-model="newFreight.bodyType"
+                      :options="bodyTypes"
+                      placeholder="Body"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div class="filter-box">
-              <label class="filter-label">Weight</label>
-              <div class="unit-input-group">
-                <input
-                  v-model.number="newFreight.weight"
-                  type="number"
-                  step="1"
-                  min="0"
-                  inputmode="numeric"
-                  placeholder="5000"
-                  :disabled="isLoading"
-                  class="courses-view-input unit-input"
-                />
-                <span class="unit-suffix">kg</span>
-              </div>
-            </div>
-
-            <div class="filter-box">
-              <label class="filter-label">Vehicle and body type</label>
-              <div class="vb-group">
+              <div class="freight-filter-row two-col">
                 <CheckboxDropdown
-                  v-model="newFreight.vehicleType"
-                  :options="vehicleTypes"
-                  placeholder="Vehicle"
+                  v-model="newFreight.mayContain"
+                  :options="cargoTypes"
+                  label="Goods"
+                  placeholder="What this load consists of"
                 />
                 <CheckboxDropdown
-                  v-model="newFreight.bodyType"
-                  :options="bodyTypes"
-                  placeholder="Body"
+                  v-model="newFreight.bodyCharacteristics"
+                  :options="bodyCharacteristics"
+                  label="Must contain"
+                  placeholder="Required equipment/certificates"
                 />
               </div>
-            </div>
-          </div>
 
-          <div class="freight-filter-row two-col">
-            <CheckboxDropdown
-              v-model="newFreight.mayContain"
-              :options="cargoTypes"
-              label="Goods"
-              placeholder="What this load consists of"
-            />
-            <CheckboxDropdown
-              v-model="newFreight.bodyCharacteristics"
-              :options="bodyCharacteristics"
-              label="Must contain"
-              placeholder="Required equipment/certificates"
-            />
-          </div>
+              <div class="freight-filter-row three-col">
+                <div class="filter-box">
+                  <label class="filter-label">Contact tel</label>
+                  <div class="tel-input-group">
+                    <select
+                      v-model="newFreight.contactDialCode"
+                      :disabled="isLoading"
+                      class="courses-view-input tel-dial-select"
+                    >
+                      <option v-for="c in callingCodes" :key="c.code" :value="c.dial">
+                        {{ c.code }} {{ c.dial }}
+                      </option>
+                    </select>
+                    <input
+                      :value="newFreight.contactPhoneNumber"
+                      @input="onPhoneInput"
+                      placeholder="5555 5555"
+                      inputmode="numeric"
+                      maxlength="9"
+                      :disabled="isLoading"
+                      class="courses-view-input tel-number-input"
+                    />
+                  </div>
+                </div>
+                <div class="filter-box">
+                  <label class="filter-label">Contact email</label>
+                  <input
+                    v-model="newFreight.contactEmail"
+                    type="email"
+                    placeholder="you@company.com"
+                    :disabled="isLoading"
+                    class="courses-view-input"
+                  />
+                </div>
+                <div class="filter-box">
+                  <label class="filter-label">Company</label>
+                  <div class="company-readonly">{{ user?.company || '—' }}</div>
+                </div>
+              </div>
 
-          <div class="freight-filter-row three-col">
-            <div class="filter-box">
-              <label class="filter-label">Contact tel</label>
-              <div class="tel-input-group">
-                <select
-                  v-model="newFreight.contactDialCode"
+              <div class="freight-filter-row two-col">
+                <div class="filter-box">
+                  <label class="filter-label">Reference ID</label>
+                  <input
+                    v-model="newFreight.name"
+                    placeholder="Short reference/title"
+                    :disabled="isLoading"
+                    class="courses-view-input"
+                  />
+                </div>
+                <div class="filter-box">
+                  <label class="filter-label">Reference ID (Visible only to you)</label>
+                  <input
+                    v-model="newFreight.internalReference"
+                    placeholder="Internal note, e.g. order number"
+                    :disabled="isLoading"
+                    class="courses-view-input"
+                  />
+                </div>
+              </div>
+
+              <div class="filter-box pl-comments-box">
+                <div class="pl-comments-label-row">
+                  <label class="filter-label">Comments</label>
+                  <span class="pl-char-count">{{ newFreight.description.length }}/{{ COMMENTS_MAX_LENGTH }}</span>
+                </div>
+                <textarea
+                  v-model="newFreight.description"
+                  placeholder="Cargo details, loading/unloading instructions..."
+                  rows="6"
+                  :maxlength="COMMENTS_MAX_LENGTH"
                   :disabled="isLoading"
-                  class="courses-view-input tel-dial-select"
-                >
-                  <option v-for="c in callingCodes" :key="c.code" :value="c.dial">
-                    {{ c.code }} {{ c.dial }}
-                  </option>
-                </select>
-                <input
-                  v-model="newFreight.contactPhoneNumber"
-                  placeholder="5555 5555"
-                  :disabled="isLoading"
-                  class="courses-view-input tel-number-input"
-                />
+                  class="courses-view-input freight-add-textarea"
+                ></textarea>
               </div>
             </div>
-            <div class="filter-box">
-              <label class="filter-label">Contact email</label>
-              <input
-                v-model="newFreight.contactEmail"
-                type="email"
-                placeholder="you@company.com"
-                :disabled="isLoading"
-                class="courses-view-input"
-              />
-            </div>
-            <div class="filter-box">
-              <label class="filter-label">Company</label>
-              <div class="company-readonly">{{ user?.company || '—' }}</div>
-            </div>
-          </div>
 
-          <div class="freight-filter-row two-col">
-            <div class="filter-box">
-              <label class="filter-label">Reference ID</label>
-              <input
-                v-model="newFreight.name"
-                placeholder="Short reference/title"
-                :disabled="isLoading"
-                class="courses-view-input"
-              />
-            </div>
-          </div>
-
-          <div class="filter-box">
-            <label class="filter-label">Comments</label>
-            <textarea
-              v-model="newFreight.description"
-              placeholder="Cargo details, loading/unloading instructions..."
-              rows="6"
-              :disabled="isLoading"
-              class="courses-view-input freight-add-textarea"
-            ></textarea>
+            <RoutePreviewMap :from="newFreight.from" :to="newFreight.to" @route-result="onRouteResult" />
           </div>
 
           <div class="find-row">
@@ -495,6 +537,87 @@ function goBack() {
   grid-template-columns: repeat(4, 1fr);
 }
 
+/* The date-mode box (Exact dates/Period) is naturally a bit shorter than the
+   Loading/Unloading time box next to it (which has its own From/Until
+   sub-labels adding height) - grid already stretches LoadingDatePicker's
+   root to match the row, this cascades that stretch down into its own box
+   so the two visually line up instead of the date box floating short. */
+.freight-filter-row.four-col :deep(.ldp-root) {
+  display: flex;
+  height: 100%;
+}
+
+.freight-filter-row.four-col :deep(.ldp-top-row) {
+  flex: 1;
+}
+
+.freight-filter-row.four-col :deep(.ldp-box) {
+  flex: 1;
+}
+
+/* Everything from Price down through Comments stacks in a left column; the map
+   sits to its right as one tall block, stretched (via grid's default
+   align-items: stretch) to start at the top of that column and end flush with
+   the bottom of the Comments box - the column's last, height-driving item. */
+.pl-map-side-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+.pl-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Four fields are too cramped once this row is squeezed into half the section
+   width, so pair them 2x2 instead of across a single line. */
+.pl-left-column .freight-filter-row.four-col {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.pl-comments-box {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.pl-comments-box .freight-add-textarea {
+  flex: 1;
+  min-height: 0;
+}
+
+/* RoutePreviewMap's root stretches to the grid row's height (set by the left
+   column, its taller sibling); these :deep() rules make the map's own inner
+   states (hint/error/canvas) fill that stretched height instead of keeping
+   their own fixed 90px/220px, so the map visually spans the whole column. */
+.pl-map-side-row :deep(.route-preview-map) {
+  margin-top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.pl-map-side-row :deep(.route-preview-canvas),
+.pl-map-side-row :deep(.route-preview-hint),
+.pl-map-side-row :deep(.route-preview-error) {
+  flex: 1;
+  height: auto;
+  min-height: 160px;
+}
+
+@media (max-width: 900px) {
+  .pl-map-side-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .vb-group {
   display: flex;
   gap: 4px;
@@ -525,9 +648,24 @@ function goBack() {
 .filter-range-group {
   display: flex;
   gap: 4px;
-  align-items: center;
+  align-items: flex-end;
   width: 100%;
   min-width: 0;
+}
+
+.filter-range-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.filter-range-item-label {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
 }
 
 .courses-view-input {
@@ -570,6 +708,30 @@ function goBack() {
 .filter-range-sep {
   width: 6px;
   flex-shrink: 0;
+}
+
+/* The native browser rendering of an empty time input's "--:--" segments
+   looks rougher than the rest of the form (wrong font, harsh black icon) -
+   these bring it in line with the surrounding inputs. */
+.filter-range-item input[type='time'] {
+  font-family: inherit;
+  color: #333;
+}
+
+.filter-range-item input[type='time']::-webkit-datetime-edit {
+  padding: 0 2px;
+}
+
+.filter-range-item input[type='time']::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 2px;
+}
+
+.filter-range-item input[type='time']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  background: #f4f4f4;
 }
 
 .tel-input-group {
@@ -622,6 +784,19 @@ function goBack() {
 .freight-add-textarea {
   resize: vertical;
   font-family: inherit;
+}
+
+.pl-comments-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pl-char-count {
+  font-size: 0.68rem;
+  color: #aaa;
+  white-space: nowrap;
 }
 
 .find-row {
