@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import apiClient from '@/services/api'
-import { createRouteMap, drawRoute } from '@/composables/useLeafletRoute'
+import { createRouteMap, drawRoute, drawSearchCircles } from '@/composables/useLeafletRoute'
 
 const props = defineProps({
   // Shaped like CountryLocationField's v-model: {mode, country, countries, location, radius}.
@@ -11,6 +11,17 @@ const props = defineProps({
     default: () => ({}),
   },
   to: {
+    type: Object,
+    default: () => ({}),
+  },
+  // Shaped like CountryLocationField's v-model: {radius, lat, lng}. The search filter's own
+  // from/to (not this posting's) - drawn as light-blue radius circles for context on why this
+  // posting matched. Omit on non-search usages (e.g. PostLoad's own live preview).
+  searchFrom: {
+    type: Object,
+    default: () => ({}),
+  },
+  searchTo: {
     type: Object,
     default: () => ({}),
   },
@@ -29,6 +40,14 @@ function sideRoutable(side) {
   if (side.mode && side.mode !== 'radius') return false
   return !!(side.country && side.location && side.location.trim())
 }
+
+// Search-radius circles derived from the search filter's from/to - only for sides that
+// actually have a radius set and a geocoded point to center on.
+const searchCircles = computed(() => {
+  return [props.searchFrom, props.searchTo]
+    .filter((side) => side && side.radius && Number(side.radius) > 0 && side.lat != null && side.lng != null)
+    .map((side) => ({ lat: side.lat, lng: side.lng, radiusKm: Number(side.radius) }))
+})
 
 const modeBlocked = computed(() => {
   return (props.from?.mode && props.from.mode !== 'radius') || (props.to?.mode && props.to.mode !== 'radius')
@@ -60,6 +79,7 @@ async function fetchPreview() {
       map = createRouteMap(mapEl.value)
     }
     drawRoute(map, latLngs)
+    drawSearchCircles(map, searchCircles.value)
 
     emit('route-result', { valid: true, distanceKm })
   } catch (e) {
@@ -82,6 +102,11 @@ function scheduleCheck() {
 }
 
 watch([() => props.from, () => props.to], scheduleCheck, { immediate: true })
+
+// Redraws just the circles (no new route fetch) when the search filter's radius/point changes.
+watch(searchCircles, (circles) => {
+  if (map && status.value === 'success') drawSearchCircles(map, circles)
+})
 
 onUnmounted(() => {
   clearTimeout(debounceTimer)

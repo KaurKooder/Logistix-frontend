@@ -1,10 +1,11 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import apiClient from '@/services/api'
 import CountryLocationField from '@/components/CountryLocationField.vue'
 import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
 import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
 import RoutePreviewMap from '@/components/RoutePreviewMap.vue'
+import ResultsOverviewMap from '@/components/ResultsOverviewMap.vue'
 import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
 import { formatThousands } from '@/utils/format'
@@ -12,8 +13,8 @@ import '@/assets/css/coursesviewcss.css'
 
 function createDefaultFilter() {
   return {
-    from: { mode: 'radius', country: '', countries: [], location: '', radius: '' },
-    to: { mode: 'radius', country: '', countries: [], location: '', radius: '' },
+    from: { mode: 'radius', country: '', countries: [], location: '', radius: '', lat: null, lng: null },
+    to: { mode: 'radius', country: '', countries: [], location: '', radius: '', lat: null, lng: null },
     availableDate: { mode: '', start: '', end: '', dates: [] },
     vehicleTypes: [],
     bodyTypes: [],
@@ -34,16 +35,22 @@ const trucks = ref([])
 const totalPages = ref(1)
 const loadingMore = ref(false)
 const expandedId = ref(null)
+// Postings the user has opened (clicked into) - grays out their row.
+const viewedIds = ref(new Set())
+// Bumped on every explicit "Find" click - the overview map only draws all current
+// postings once this has fired at least once (see ResultsOverviewMap's searchTrigger).
+const mapSearchTrigger = ref(0)
 
 // "Radius" mode searches a single country (+ optional location/radius);
 // "Country selection" mode searches across a whole set of countries at once.
-function countryFilterParams(side, locationKey) {
+function countryFilterParams(side, locationKey, radiusKey) {
   if (side.mode === 'countries') {
     return { countries: side.countries?.length ? side.countries : undefined }
   }
   return {
     countries: side.country ? [side.country] : undefined,
     [locationKey]: side.location || undefined,
+    [radiusKey]: side.radius || undefined,
   }
 }
 
@@ -51,14 +58,16 @@ async function loadTrucks({ append = false } = {}) {
   try {
     const f = filter.value
 
-    const fromParams = countryFilterParams(f.from, 'fromLocation')
-    const toParams = countryFilterParams(f.to, 'toLocation')
+    const fromParams = countryFilterParams(f.from, 'fromLocation', 'fromRadius')
+    const toParams = countryFilterParams(f.to, 'toLocation', 'toRadius')
 
     const params = {
       fromCountries: fromParams.countries,
       fromLocation: fromParams.fromLocation,
+      fromRadius: fromParams.fromRadius,
       toCountries: toParams.countries,
       toLocation: toParams.toLocation,
+      toRadius: toParams.toRadius,
       vehicleTypes: f.vehicleTypes.length ? f.vehicleTypes : undefined,
       bodyTypes: f.bodyTypes.length ? f.bodyTypes : undefined,
       minLength: f.minLength || undefined,
@@ -100,12 +109,38 @@ async function loadMoreTrucks() {
 function search() {
   filter.value.page = 0
   expandedId.value = null
+  mapSearchTrigger.value++
   loadTrucks()
 }
 
+// Marks whatever posting is currently open as viewed - called right before navigating
+// away from it (to another posting, or back to the overview map), so a posting only
+// grays out once the user has actually moved on from looking at it.
+function markViewed() {
+  if (expandedId.value != null) viewedIds.value.add(expandedId.value)
+}
+
 function toggleRow(id) {
+  markViewed()
   expandedId.value = expandedId.value === id ? null : id
 }
+
+// Always opens (never toggles closed) - used by the overview map, where clicking a
+// route should show that posting regardless of what's currently selected.
+function openTruck(id) {
+  markViewed()
+  expandedId.value = id
+}
+
+function closeDetail() {
+  markViewed()
+  expandedId.value = null
+}
+
+// Hovering a results-table row highlights that posting's route on the overview map.
+const hoveredTruckId = ref(null)
+
+const expandedTruck = computed(() => trucks.value.find((t) => t.id === expandedId.value) || null)
 
 // How long ago a posting was created, e.g. "45 min", "2h>", "1 day 1h>".
 function formatAge(createdAt) {
@@ -177,6 +212,13 @@ function formatTruckDescriptor(t) {
 
 function formatRate(t) {
   return t.minimumRate ? `${formatThousands(t.minimumRate.toFixed(2))} €/km` : '-'
+}
+
+// One-line label for a posting, shown in the overview map's overlapping-point tooltip.
+function formatTruckLabel(t) {
+  const trip = `${formatOrigin(t)} → ${formatDestination(t)}`
+  const rate = formatRate(t)
+  return rate !== '-' ? `${trip} · ${rate}` : trip
 }
 
 function formatKm(km) {
@@ -320,75 +362,119 @@ onUnmounted(() => {
           </div>
         </section>
 
-        <div class="st-table-wrap">
-          <table class="st-table">
-            <thead>
-              <tr>
-                <th class="st-arrow-col"></th>
-                <th>Age</th>
-                <th>Truck</th>
-                <th>Available</th>
-                <th>Trip</th>
-                <th>KM</th>
-                <th>Rate</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-if="trucks.length === 0">
-                <tr>
-                  <td colspan="7" class="st-empty-cell">No trucks found.</td>
-                </tr>
-              </template>
-              <template v-for="t in trucks" :key="t.id">
-                <tr class="st-row" :class="{ expanded: expandedId === t.id }" @click="toggleRow(t.id)">
-                  <td class="st-arrow-col">{{ expandedId === t.id ? '▼' : '▶' }}</td>
-                  <td>{{ formatAge(t.updatedAt || t.createdAt) }}</td>
-                  <td>{{ formatTruckDescriptor(t) }}</td>
-                  <td>{{ formatAvailable(t) }}</td>
-                  <td>
-                    <div class="st-line"><span class="st-line-arrow">↓</span>{{ formatOrigin(t) }}</div>
-                    <div class="st-row-sub st-line"><span class="st-line-arrow">↓</span>{{ formatDestination(t) }}</div>
-                  </td>
-                  <td>{{ formatKm(t.distanceKm) }}</td>
-                  <td>{{ formatRate(t) }}</td>
-                </tr>
-                <tr v-if="expandedId === t.id" class="st-detail-row">
-                  <td colspan="7">
-                    <div class="st-detail">
-                      <div class="st-detail-col">
-                        <h4>Vehicle</h4>
-                        <p v-if="t.vehicleDescription">{{ t.vehicleDescription }}</p>
-                        <p>{{ t.vehicleType?.length ? t.vehicleType.join(', ') : '—' }}</p>
-                        <img v-if="t.vehiclePhotoUrl" :src="t.vehiclePhotoUrl" class="st-detail-photo" alt="Vehicle photo" />
-                      </div>
-                      <div class="st-detail-col">
-                        <h4>Body</h4>
-                        <p v-if="t.bodyDescription">{{ t.bodyDescription }}</p>
-                        <p>{{ t.bodyType?.length ? t.bodyType.join(', ') : '—' }}</p>
-                        <img v-if="t.bodyPhotoUrl" :src="t.bodyPhotoUrl" class="st-detail-photo" alt="Body photo" />
-                      </div>
-                      <div class="st-detail-col">
-                        <h4>Comments</h4>
-                        <p>{{ t.comments || '—' }}</p>
-                      </div>
-                      <div class="st-detail-col">
-                        <h4>Route</h4>
-                        <RoutePreviewMap
-                          :from="{ mode: t.fromMode, country: t.fromCountry, location: t.fromLocation }"
-                          :to="{ mode: t.toMode, country: t.toCountry, location: t.toLocation }"
-                        />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          <div ref="sentinelEl" class="st-scroll-sentinel"></div>
-          <span v-if="loadingMore" class="st-scroll-status">Loading more...</span>
-          <span v-else-if="trucks.length > 0 && filter.page + 1 >= totalPages" class="st-scroll-status"
-            >No more results</span
-          >
+        <div class="st-results-layout">
+          <div class="st-list-col">
+            <div class="st-table-wrap">
+              <table class="st-table">
+                <thead>
+                  <tr>
+                    <th class="st-arrow-col"></th>
+                    <th>Age</th>
+                    <th>Truck</th>
+                    <th>Available</th>
+                    <th>Trip</th>
+                    <th>KM</th>
+                    <th>Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-if="trucks.length === 0">
+                    <tr>
+                      <td colspan="7" class="st-empty-cell">No trucks found.</td>
+                    </tr>
+                  </template>
+                  <tr
+                    v-for="t in trucks"
+                    :key="t.id"
+                    class="st-row"
+                    :class="{ expanded: expandedId === t.id, viewed: viewedIds.has(t.id) }"
+                    @click="toggleRow(t.id)"
+                    @mouseenter="hoveredTruckId = t.id"
+                    @mouseleave="hoveredTruckId = null"
+                  >
+                    <td class="st-arrow-col">{{ expandedId === t.id ? '▼' : '▶' }}</td>
+                    <td>{{ formatAge(t.updatedAt || t.createdAt) }}</td>
+                    <td>{{ formatTruckDescriptor(t) }}</td>
+                    <td>{{ formatAvailable(t) }}</td>
+                    <td>
+                      <div class="st-line"><span class="st-line-arrow">↓</span>{{ formatOrigin(t) }}</div>
+                      <div class="st-row-sub st-line"><span class="st-line-arrow">↓</span>{{ formatDestination(t) }}</div>
+                    </td>
+                    <td>{{ formatKm(t.distanceKm) }}</td>
+                    <td>{{ formatRate(t) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div ref="sentinelEl" class="st-scroll-sentinel"></div>
+              <span v-if="loadingMore" class="st-scroll-status">Loading more...</span>
+              <span v-else-if="trucks.length > 0 && filter.page + 1 >= totalPages" class="st-scroll-status"
+                >No more results</span
+              >
+            </div>
+          </div>
+
+          <aside class="st-detail-sidebar">
+            <div v-if="expandedTruck" class="st-detail-panel">
+              <button
+                type="button"
+                class="st-detail-close-btn"
+                title="Close - back to the results map"
+                @click="closeDetail"
+              >
+                ✕
+              </button>
+              <div class="st-detail">
+                <div class="st-detail-col">
+                  <h4>Vehicle</h4>
+                  <p v-if="expandedTruck.vehicleDescription">{{ expandedTruck.vehicleDescription }}</p>
+                  <p>{{ expandedTruck.vehicleType?.length ? expandedTruck.vehicleType.join(', ') : '—' }}</p>
+                  <img
+                    v-if="expandedTruck.vehiclePhotoUrl"
+                    :src="expandedTruck.vehiclePhotoUrl"
+                    class="st-detail-photo"
+                    alt="Vehicle photo"
+                  />
+                </div>
+                <div class="st-detail-col">
+                  <h4>Body</h4>
+                  <p v-if="expandedTruck.bodyDescription">{{ expandedTruck.bodyDescription }}</p>
+                  <p>{{ expandedTruck.bodyType?.length ? expandedTruck.bodyType.join(', ') : '—' }}</p>
+                  <img
+                    v-if="expandedTruck.bodyPhotoUrl"
+                    :src="expandedTruck.bodyPhotoUrl"
+                    class="st-detail-photo"
+                    alt="Body photo"
+                  />
+                </div>
+                <div class="st-detail-col">
+                  <h4>Comments</h4>
+                  <p>{{ expandedTruck.comments || '—' }}</p>
+                </div>
+                <div class="st-detail-col">
+                  <h4>Route</h4>
+                  <RoutePreviewMap
+                    :from="{ mode: expandedTruck.fromMode, country: expandedTruck.fromCountry, location: expandedTruck.fromLocation }"
+                    :to="{ mode: expandedTruck.toMode, country: expandedTruck.toCountry, location: expandedTruck.toLocation }"
+                    :search-from="filter.from"
+                    :search-to="filter.to"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="st-detail-overview" v-show="!expandedTruck">
+              <ResultsOverviewMap
+                :results="trucks"
+                :route-url="(id) => `/trucks/${id}/route`"
+                :format-label="formatTruckLabel"
+                :hovered-id="hoveredTruckId"
+                :search-trigger="mapSearchTrigger"
+                :search-from="filter.from"
+                :search-to="filter.to"
+                :active="!expandedTruck"
+                @select="openTruck"
+              />
+            </div>
+          </aside>
         </div>
       </div>
     </div>
@@ -617,6 +703,14 @@ onUnmounted(() => {
   background: #fdf3e4;
 }
 
+.st-row.viewed {
+  background: #f4f4f4;
+}
+
+.st-row.viewed:hover {
+  background: #eee7db;
+}
+
 .st-empty-cell {
   text-align: center;
   color: #999;
@@ -624,14 +718,57 @@ onUnmounted(() => {
   padding: 24px 0;
 }
 
-.st-detail-row td {
-  white-space: normal;
-  background: #fafafa;
+.st-results-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.st-list-col {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.st-detail-sidebar {
+  flex: 0 0 380px;
+  position: sticky;
+  top: 20px;
+}
+
+.st-detail-panel {
+  position: relative;
+  background: #fdfcf9;
+  padding: 20px 24px;
+  border-left: 3px solid #d4a76a;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.st-detail-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.st-detail-close-btn:hover {
+  color: #b3261e;
+}
+
+.st-detail-overview {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .st-detail {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr;
   gap: 20px;
   padding: 10px 6px;
 }
@@ -682,8 +819,15 @@ onUnmounted(() => {
   .secondary-row {
     grid-template-columns: 1fr;
   }
-  .st-detail {
-    grid-template-columns: 1fr;
+
+  .st-results-layout {
+    flex-direction: column;
+  }
+
+  .st-detail-sidebar {
+    flex: 1 1 auto;
+    width: 100%;
+    position: static;
   }
 }
 </style>

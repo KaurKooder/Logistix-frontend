@@ -38,8 +38,13 @@ Valmis ja töötavad funktsionaalsused:
 * juhend asub backendi repo readme-s)
 
 # Tööriistad
-* Koodi kirjutamine: intelliJ
-* Raamistik: vue
+* Koodi kirjutamine: IntelliJ IDEA
+* Raamistik: Vue 3 (Composition API)
+* Build tool: Vite
+* State management: Pinia
+* Marsruutimine: Vue Router
+* HTTP päringud: Axios
+* Kaardid: Leaflet + HERE API
 * Docker
 * Gitlab
 * Domain: http://vkkeskusdemo.hopto.org/

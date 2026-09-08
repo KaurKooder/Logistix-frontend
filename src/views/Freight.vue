@@ -7,6 +7,7 @@ import CheckboxDropdown from '@/components/CheckboxDropdown.vue'
 import LoadingDatePicker from '@/components/LoadingDatePicker.vue'
 import RouteMap from '@/components/RouteMap.vue'
 import RouteCalculator from '@/components/RouteCalculator.vue'
+import ResultsOverviewMap from '@/components/ResultsOverviewMap.vue'
 import { vehicleTypes } from '@/data/vehicleTypes'
 import { bodyTypes } from '@/data/bodyTypes'
 import { bodyCharacteristics } from '@/data/bodyCharacteristics'
@@ -52,8 +53,8 @@ const userId = computed(() => user.value?.userId)
 // --- MITME AKNA / TABI HALDUS & TRANSPORDI FILTRID ---
 function createDefaultFilter() {
   return {
-    from: { mode: 'radius', country: '', countries: [], location: '', radius: '' },
-    to: { mode: 'radius', country: '', countries: [], location: '', radius: '' },
+    from: { mode: 'radius', country: '', countries: [], location: '', radius: '', lat: null, lng: null },
+    to: { mode: 'radius', country: '', countries: [], location: '', radius: '', lat: null, lng: null },
     loadingDate: { mode: '', start: '', end: '', dates: [] },
     vehicleTypes: [],
     bodyTypes: [],
@@ -83,12 +84,11 @@ const tabs = ref([
     muted: false,
     loadingMore: false,
     filter: createDefaultFilter(),
-    // Notification badge bookkeeping (see loadCoursesForTab): ids already
-    // shown to the user for this tab, and how many newly-appeared postings
-    // haven't been viewed yet.
-    lastSeenIds: new Set(),
-    unseenCount: 0,
-    hasLoadedOnce: false,
+    // Postings the user has opened (clicked into) in this tab - see unviewedCount().
+    viewedIds: new Set(),
+    // Bumped on every explicit "Find" click - the overview map only draws all of a tab's
+    // postings once this has fired at least once (see ResultsOverviewMap's searchTrigger).
+    mapSearchTrigger: 0,
   },
 ])
 
@@ -118,6 +118,8 @@ const hiddenIds = computed(() => new Set(hiddenCourses.value.map((c) => c.id)))
 // expanded-row state lives separately rather than forcing the shape onto them.
 const savedExpandedId = ref(null)
 const hiddenExpandedId = ref(null)
+const savedViewedIds = ref(new Set())
+const hiddenViewedIds = ref(new Set())
 
 function isSaved(id) {
   return savedCourses.value.some((c) => c.id === id)
@@ -188,6 +190,7 @@ const activeTab = computed(() => {
       muted: true,
       loadingMore: false,
       filter: createDefaultFilter(),
+      viewedIds: savedViewedIds.value,
     }
   }
   if (activeTabId.value === HIDDEN_TAB_ID) {
@@ -206,6 +209,7 @@ const activeTab = computed(() => {
       muted: true,
       loadingMore: false,
       filter: createDefaultFilter(),
+      viewedIds: hiddenViewedIds.value,
     }
   }
   return tabs.value.find((t) => t.id === activeTabId.value) || tabs.value[0]
@@ -216,6 +220,13 @@ const activeTab = computed(() => {
 const visibleCourses = computed(() => {
   if (activeTabId.value === HIDDEN_TAB_ID) return activeTab.value.courses
   return activeTab.value.courses.filter((c) => !hiddenIds.value.has(c.id))
+})
+
+// Saved/Hidden are static lists with no "Find" button - show their overview map
+// immediately rather than waiting on a search trigger that will never fire.
+const overviewSearchTrigger = computed(() => {
+  if (activeTabId.value === SAVED_TAB_ID || activeTabId.value === HIDDEN_TAB_ID) return 1
+  return activeTab.value.mapSearchTrigger
 })
 
 // --- Tab title inline rename (double-click to edit) ---
@@ -248,9 +259,8 @@ function addNewTab() {
     muted: false,
     loadingMore: false,
     filter: createDefaultFilter(),
-    lastSeenIds: new Set(),
-    unseenCount: 0,
-    hasLoadedOnce: false,
+    viewedIds: new Set(),
+    mapSearchTrigger: 0,
   })
   activeTabId.value = newId
   updateUrl()
@@ -278,8 +288,13 @@ function updateUrl() {
 
 function selectTab(tab) {
   activeTabId.value = tab.id
-  tab.unseenCount = 0
   updateUrl()
+}
+
+// Postings currently loaded in this tab that haven't been opened yet - shown as the
+// tab's red badge count.
+function unviewedCount(tab) {
+  return tab.courses.filter((c) => !hiddenIds.value.has(c.id) && !tab.viewedIds.has(c.id)).length
 }
 
 function selectSavedTab() {
@@ -350,19 +365,6 @@ async function loadCoursesForTab(tab, { append = false } = {}) {
     const newCourses = res.data.content || []
     tab.courses = append ? [...tab.courses, ...newCourses] : newCourses
     tab.totalPages = res.data.totalPages || 1
-
-    // A fresh (non-paginated) search that turns up postings this tab hasn't
-    // shown before counts as "new" for the notification badge - but not on
-    // the very first load, or every initial search would start "unread".
-    if (!append) {
-      const ids = new Set(newCourses.map((c) => c.id))
-      if (tab.hasLoadedOnce && !tab.muted) {
-        const freshlyNew = [...ids].filter((id) => !tab.lastSeenIds.has(id))
-        tab.unseenCount += freshlyNew.length
-      }
-      tab.lastSeenIds = ids
-      tab.hasLoadedOnce = true
-    }
   } catch (error) {
     console.error('Error loading freight:', error)
     if (error.response && error.response.status === 401) {
@@ -384,6 +386,7 @@ async function loadMoreForTab(tab) {
 
 function searchActiveTab() {
   activeTab.value.filter.page = 0
+  activeTab.value.mapSearchTrigger++
   loadCoursesForTab(activeTab.value)
 }
 
@@ -398,16 +401,40 @@ function toggleSort(tab, field) {
   loadCoursesForTab(tab)
 }
 
+// Marks whatever posting is currently open as viewed - called right before navigating
+// away from it (to another posting, or back to the overview map), so a posting only
+// grays out once the user has actually moved on from looking at it.
+function markViewed(tab) {
+  if (tab.expandedId != null) tab.viewedIds.add(tab.expandedId)
+}
+
 function toggleRow(tab, id) {
+  markViewed(tab)
   tab.expandedId = tab.expandedId === id ? null : id
   // Switching to a different posting (or closing one) always jumps back to Info.
   detailTab.value = 'info'
+}
+
+// Always opens (never toggles closed) - used by the overview map, where clicking a
+// route should show that posting regardless of what's currently selected.
+function openCourse(tab, id) {
+  markViewed(tab)
+  tab.expandedId = id
+  detailTab.value = 'info'
+}
+
+function closeDetail(tab) {
+  markViewed(tab)
+  tab.expandedId = null
 }
 
 // The posting currently shown in the detail sidebar (null when nothing selected).
 const selectedCourse = computed(() => {
   return activeTab.value.courses.find((c) => c.id === activeTab.value.expandedId) || null
 })
+
+// Hovering a results-table row highlights that posting's route on the overview map.
+const hoveredCourseId = ref(null)
 
 // Which sub-tab (Info / Map / Calculate) the detail sidebar is showing.
 const detailTab = ref('info')
@@ -442,6 +469,13 @@ function formatTimeRange(start, end) {
 function formatPlace(country, location) {
   if (!country) return '?'
   return location ? `${country}-${location}` : country
+}
+
+// One-line label for a posting, shown in the overview map's overlapping-point tooltip.
+function formatCourseLabel(c) {
+  const trip = `${formatPlace(c.fromCountry, c.fromLocation)} → ${formatPlace(c.toCountry, c.toLocation)}`
+  const price = c.price != null ? `${formatThousands(c.price)} €` : ''
+  return price ? `${trip} · ${price}` : trip
 }
 
 // How long ago a posting was created, e.g. "45 min", "2h>", "1 day 1h>".
@@ -571,7 +605,9 @@ onUnmounted(() => {
               @click.stop="toggleTabMute(tab)"
             >
               {{ tab.muted ? '🔕' : '🔔' }}
-              <span v-if="tab.unseenCount > 0" class="tab-notif-badge">{{ tab.unseenCount }}</span>
+              <span v-if="!tab.muted && unviewedCount(tab) > 0" class="tab-notif-badge">{{
+                unviewedCount(tab)
+              }}</span>
             </button>
             <button
               v-if="tabs.length > 1"
@@ -805,8 +841,10 @@ onUnmounted(() => {
                     v-for="c in visibleCourses"
                     :key="c.id"
                     class="freight-row"
-                    :class="{ expanded: activeTab.expandedId === c.id }"
+                    :class="{ expanded: activeTab.expandedId === c.id, viewed: activeTab.viewedIds.has(c.id) }"
                     @click="toggleRow(activeTab, c.id)"
+                    @mouseenter="hoveredCourseId = c.id"
+                    @mouseleave="hoveredCourseId = null"
                   >
                     <td class="freight-col-check" @click.stop="toggleHideSelection(c.id)">
                       <input type="checkbox" :checked="selectedForHide.has(c.id)" />
@@ -892,6 +930,14 @@ onUnmounted(() => {
                   @click="detailTab = 'calculate'"
                 >
                   Calculate
+                </button>
+                <button
+                  type="button"
+                  class="freight-detail-close-btn"
+                  title="Close - back to the results map"
+                  @click="closeDetail(activeTab)"
+                >
+                  ✕
                 </button>
               </div>
 
@@ -1025,6 +1071,8 @@ onUnmounted(() => {
                 <RouteMap
                   :key="selectedCourse.id"
                   :route-url="`/courses/${selectedCourse.id}/route`"
+                  :search-from="activeTab.filter.from"
+                  :search-to="activeTab.filter.to"
                   @distance-loaded="(km) => (courseDistances[selectedCourse.id] = km)"
                 />
               </template>
@@ -1037,8 +1085,18 @@ onUnmounted(() => {
                 />
               </template>
             </div>
-            <div v-else class="freight-detail-placeholder">
-              Vali pakkumine, et näha detaile.
+            <div class="freight-detail-overview" v-show="!selectedCourse">
+              <ResultsOverviewMap
+                :results="visibleCourses"
+                :route-url="(id) => `/courses/${id}/route`"
+                :format-label="formatCourseLabel"
+                :hovered-id="hoveredCourseId"
+                :search-trigger="overviewSearchTrigger"
+                :search-from="activeTab.filter.from"
+                :search-to="activeTab.filter.to"
+                :active="!selectedCourse"
+                @select="(id) => openCourse(activeTab, id)"
+              />
             </div>
           </aside>
         </div>
@@ -1330,15 +1388,6 @@ onUnmounted(() => {
   top: 20px;
 }
 
-.freight-detail-placeholder {
-  border: 1px dashed #ddd;
-  border-radius: 8px;
-  padding: 40px 20px;
-  text-align: center;
-  color: #999;
-  font-size: 0.88rem;
-}
-
 .freight-table-wrap {
   overflow-x: auto;
 }
@@ -1472,6 +1521,14 @@ onUnmounted(() => {
   background: #fdf3e4;
 }
 
+.freight-row.viewed {
+  background: #f4f4f4;
+}
+
+.freight-row.viewed:hover {
+  background: #eee7db;
+}
+
 .freight-row td {
   padding: 10px;
   vertical-align: top;
@@ -1581,6 +1638,27 @@ onUnmounted(() => {
 .freight-detail-tab-btn.active {
   color: #b55a30;
   border-bottom-color: #d4a76a;
+}
+
+.freight-detail-close-btn {
+  margin-left: auto;
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.freight-detail-close-btn:hover {
+  color: #b3261e;
+}
+
+.freight-detail-overview {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .freight-detail-price-row {
